@@ -1,6 +1,4 @@
 ---
-import { Font } from 'astro:assets'
-
 import { prod } from 'astro-pure/server'
 import type { SiteMeta } from 'astro-pure/types'
 import config from 'virtual:config'
@@ -28,12 +26,7 @@ const socialImageURL = new URL(ogImage ? ogImage : config.socialCard, Astro.url)
 <link rel='manifest' href='/favicon/site.webmanifest' />
 
 {/* Font preloads */}
-<Font cssVariable='--font-satoshi' preload={[{ subset: 'latin', style: 'normal' }]} />
-<style>
-  body {
-    font-family: var(--font-satoshi);
-  }
-</style>
+{/** Font is configured in global CSS (src/assets/styles/app.css) */}
 
 {/* Canonical URL */}
 <link rel='canonical' href={canonicalURL} />

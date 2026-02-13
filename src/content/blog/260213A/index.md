@@ -4,9 +4,9 @@ publishDate: 2026-02-13
 updatedDate: 2026-02-13
 description: '整理 TikZ 与 PGF 相关资料和项目链接，便于后续快速查找。'
 tags:
-	- tikz
-	- latex
-	- links
+  - tikz
+  - latex
+  - links
 language: 'zh-CN'
 ---
 

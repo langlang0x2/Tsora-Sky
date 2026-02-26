@@ -146,14 +146,14 @@ const meta = {
                                   class='absolute inset-0 h-full w-full object-cover'
                                 />
                               </div>
-                              <div class='min-w-0 mt-2.5 flex-1'>
+                              <div class='min-w-0 mt-2.5 flex flex-1 flex-col'>
                                 <h3 class='line-clamp-2 text-base font-medium sm:text-lg'>{title}</h3>
                                 {song.data.note && (
                                   <p class='mt-1 line-clamp-2 text-sm text-muted-foreground'>
                                     {song.data.note}
                                   </p>
                                 )}
-                                <div class='mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground'>
+                                <div class='mt-auto pt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground'>
                                   <span>
                                     收藏于 {song.data.collectDate.toISOString().slice(0, 10)}
                                   </span>
@@ -223,19 +223,28 @@ const meta = {
       const ids = getSongIds()
       if (ids.length === 0) return {}
 
-      const res = await fetch(STATS_API, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          accept: 'application/json'
-        },
-        body: JSON.stringify({ ids })
-      })
-      if (!res.ok) throw new Error(`Load stats failed: ${res.status}`)
+      const CHUNK_SIZE = 200
+      const merged = {}
 
-      const data = await res.json()
-      if (!data || typeof data !== 'object') return {}
-      return data
+      for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+        const chunk = ids.slice(i, i + CHUNK_SIZE)
+        const res = await fetch(STATS_API, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            accept: 'application/json'
+          },
+          body: JSON.stringify({ ids: chunk })
+        })
+        if (!res.ok) throw new Error(`Load stats failed: ${res.status}`)
+
+        const data = await res.json()
+        if (data && typeof data === 'object') {
+          Object.assign(merged, data)
+        }
+      }
+
+      return merged
     }
 
     async function incClickCloud(songId) {

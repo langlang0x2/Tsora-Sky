@@ -104,7 +104,7 @@ const meta = {
               {groupedSongs.map(([ym, list]) => (
                 <div class='mt-12'>
                   <h2 class='text-2xl font-medium'>{ym}</h2>
-                  <ul class='mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4'>
+                  <ul class='mt-4 song-grid'>
                     {
                       list.map((song, index) => {
                         const videoUrl =
@@ -180,7 +180,7 @@ const meta = {
               <h2 class='text-2xl font-medium'>按播放量排序</h2>
               <ul
                 id='song-flat-list'
-                class='mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4'
+                class='mt-4 song-grid'
                 data-song-flat-list
               />
             </div>
@@ -380,8 +380,14 @@ const meta = {
   </script>
 
   <style>
+    :global(.song-grid) {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 15.5rem), 1fr));
+    }
+
     :global(#main-container) {
-      max-width: 88rem;
+      max-width: 96rem;
       padding-left: calc(0.75rem + env(safe-area-inset-left));
       padding-right: calc(0.75rem + env(safe-area-inset-right));
     }

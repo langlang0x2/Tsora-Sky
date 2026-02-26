@@ -15,12 +15,17 @@
     "lint": "eslint --fix 'src/**/*.{js,ts,jsx,tsx,astro}'",
     "yijiansilian": "bun lint && bun sync && bun check && bun format",
     "clean": "rm -rf .astro .vercel dist",
-    "cache:avatars": "tsx preset/scripts/cacheAvatars.ts"
+    "cache:avatars": "tsx preset/scripts/cacheAvatars.ts",
+    "songs:sync": "node preset/scripts/syncBiliSongs.mjs",
+    "songs:sync:no-cover": "cross-env SONGS_SYNC_DOWNLOAD=0 node preset/scripts/syncBiliSongs.mjs",
+    "songs:sync:with-cover": "cross-env SONGS_SYNC_DOWNLOAD=1 node preset/scripts/syncBiliSongs.mjs",
+    "songs:parse-csv": "node preset/scripts/parseSongsCsv.mjs"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.6",
     "@astrojs/rss": "^4.0.14",
     "@astrojs/vercel": "^9.0.2",
+    "@vercel/kv": "^3.0.0",
     "@waline/client": "^3.8.0",
     "astro": "^5.16.6",
     "astro-pure": "^1.4.0",
@@ -34,6 +39,7 @@
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.7.0",
     "@typescript-eslint/parser": "^8.51.0",
+    "cross-env": "^10.1.0",
     "eslint": "^9.39.2",
     "eslint-plugin-astro": "^1.5.0",
     "prettier": "^3.7.4",

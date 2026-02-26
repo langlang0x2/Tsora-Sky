@@ -1,0 +1,378 @@
+---
+import type { CollectionEntry } from 'astro:content'
+import { getCollection } from 'astro:content'
+
+import { Button } from 'astro-pure/user'
+import PageLayout from '@/layouts/BaseLayout.astro'
+
+export const prerender = true
+
+type SongEntry = CollectionEntry<'songs'>
+
+const allSongs = (await getCollection('songs')).filter((s) => !s.data.draft)
+const songs = [...allSongs].sort(
+  (a, b) => b.data.collectDate.getTime() - a.data.collectDate.getTime()
+)
+
+const tagCount = new Map<string, number>()
+for (const song of songs) {
+  for (const tag of song.data.tags) {
+    tagCount.set(tag, (tagCount.get(tag) ?? 0) + 1)
+  }
+}
+const allTags = [...tagCount.entries()].sort(([a], [b]) => a.localeCompare(b, 'zh-CN'))
+
+function formatYearMonth(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  return `${year}-${month}`
+}
+
+const groups = new Map<string, SongEntry[]>()
+for (const song of songs) {
+  const key = formatYearMonth(song.data.collectDate)
+  const arr = groups.get(key)
+  if (arr) arr.push(song)
+  else groups.set(key, [song])
+}
+
+const groupedSongs = [...groups.entries()]
+const baseUrl = import.meta.env.BASE_URL
+
+const meta = {
+  title: '收藏室',
+  description: '带封面与标签的歌曲收藏，点击卡片直达视频。'
+}
+---
+
+<PageLayout {meta}>
+  <main class='mt-6 lg:mt-10'>
+    <div id='content-header' class='animate'>
+      <h1 class='mb-2 text-3xl font-medium'>收藏室</h1>
+      <p class='text-muted-foreground'>点击会在新标签页打开视频，并在本机记录观看次数。</p>
+      <p class='mt-3'>总观看次数：<samp id='total-clicks'>0</samp></p>
+      <div class='mt-4 flex flex-wrap gap-3' aria-label='Sort mode'>
+        <Button href='#' variant='pill' data-sort-mode='date'>按收藏时间</Button>
+        <Button href='#' variant='pill' data-sort-mode='plays'>按播放量</Button>
+      </div>
+    </div>
+
+    <div class='mt-6 flex flex-wrap gap-3 animate' aria-label='Tags'>
+      <Button href='/songs' variant='pill' class='items-start gap-x-1' aria-current='page'>
+        全部
+        <span class='text-xs'>{songs.length}</span>
+      </Button>
+      {
+        allTags.map(([tag, count]) => (
+          <Button
+            href={`/songs/tags/${tag}`}
+            variant='pill'
+            class='items-start gap-x-1'
+          >
+            {tag}
+            <span class='text-xs'>{count}</span>
+          </Button>
+        ))
+      }
+    </div>
+
+    <section id='content' class='animate mt-8' aria-label='Song list'>
+      {
+        songs.length === 0 ? (
+          <p>暂无收藏。</p>
+        ) : (
+          <>
+            <div data-song-groups>
+              {groupedSongs.map(([ym, list]) => (
+                <div class='mt-12'>
+                  <h2 class='text-2xl font-medium'>{ym}</h2>
+                  <ul class='mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4'>
+                    {
+                      list.map((song, index) => {
+                        const videoUrl =
+                          song.data.videoUrl ??
+                          (song.data.bvid
+                            ? `https://www.bilibili.com/video/${song.data.bvid}/`
+                            : '#')
+                        const coverRaw = song.data.cover ?? '/images/social-card.png'
+                        const coverHttps = coverRaw.startsWith('http://')
+                          ? `https://${coverRaw.slice('http://'.length)}`
+                          : coverRaw
+                        const cover = coverHttps.startsWith('/')
+                          ? `${baseUrl}${coverHttps.slice(1)}`
+                          : coverHttps
+                        const title =
+                          song.data.title ??
+                          (song.data.bvid ? `（未同步）${song.data.bvid}` : song.id)
+
+                        return (
+                          <li
+                            class='h-full'
+                            data-origin-index={index}
+                            data-collect-ts={song.data.collectDate.getTime()}
+                          >
+                            <a
+                              class='group flex h-full flex-col overflow-hidden rounded-2xl border bg-muted p-2.5 transition-all hover:border-foreground/25 hover:shadow-sm sm:p-3'
+                              href={videoUrl}
+                              target='_blank'
+                              rel='noreferrer'
+                              data-song-id={song.id}
+                            >
+                              <div class='relative aspect-video w-full overflow-hidden rounded-xl bg-background'>
+                                <img
+                                  src={cover}
+                                  alt={title}
+                                  loading='lazy'
+                                  decoding='async'
+                                  onerror="this.onerror=null;this.src='/images/social-card.png'"
+                                  class='absolute inset-0 h-full w-full object-cover'
+                                />
+                              </div>
+                              <div class='min-w-0 mt-2.5 flex-1'>
+                                <h3 class='line-clamp-2 text-base font-medium sm:text-lg'>{title}</h3>
+                                {song.data.note && (
+                                  <p class='mt-1 line-clamp-2 text-sm text-muted-foreground'>
+                                    {song.data.note}
+                                  </p>
+                                )}
+                                <div class='mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground'>
+                                  <span>
+                                    收藏于 {song.data.collectDate.toISOString().slice(0, 10)}
+                                  </span>
+                                  <span class='select-none'>·</span>
+                                  <span>
+                                    观看次数：<samp data-click-count>0</samp>
+                                  </span>
+                                  {song.data.tags.length > 0 && (
+                                    <span class='truncate'>标签：{song.data.tags.join('、')}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </a>
+                          </li>
+                        )
+                      })
+                    }
+                  </ul>
+                </div>
+              ))}
+            </div>
+
+            <div id='song-flat-wrap' class='mt-12 hidden'>
+              <h2 class='text-2xl font-medium'>按播放量排序</h2>
+              <ul
+                id='song-flat-list'
+                class='mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4'
+                data-song-flat-list
+              />
+            </div>
+          </>
+        )
+      }
+    </section>
+  </main>
+
+  <script is:inline>
+    const SORT_MODE_KEY = 'tsora-songs-sort-mode-v1'
+    const STATS_API = '/api/songs/stats'
+    let clickMap = {}
+
+    function loadSortMode() {
+      try {
+        const raw = localStorage.getItem(SORT_MODE_KEY)
+        return raw === 'plays' ? 'plays' : 'date'
+      } catch {
+        return 'date'
+      }
+    }
+
+    function saveSortMode(mode) {
+      try {
+        localStorage.setItem(SORT_MODE_KEY, mode)
+      } catch {
+        // ignore
+      }
+    }
+
+    function getSongIds() {
+      const links = document.querySelectorAll('a[data-song-id]')
+      return [...links]
+        .map((a) => a.getAttribute('data-song-id'))
+        .filter((id) => typeof id === 'string' && id.length > 0)
+    }
+
+    async function loadClicksFromCloud() {
+      const ids = getSongIds()
+      if (ids.length === 0) return {}
+
+      const query = encodeURIComponent(ids.join(','))
+      const res = await fetch(`${STATS_API}?ids=${query}`, {
+        method: 'GET',
+        headers: { accept: 'application/json' }
+      })
+      if (!res.ok) throw new Error(`Load stats failed: ${res.status}`)
+
+      const data = await res.json()
+      if (!data || typeof data !== 'object') return {}
+      return data
+    }
+
+    async function incClickCloud(songId) {
+      const res = await fetch(STATS_API, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({ songId })
+      })
+      if (!res.ok) throw new Error(`Increase stats failed: ${res.status}`)
+
+      const data = await res.json()
+      const plays = Number(data?.plays ?? 0)
+      clickMap[songId] = Number.isFinite(plays) ? plays : 0
+    }
+
+    function updateUIFromMap(map = clickMap) {
+      let total = 0
+      for (const k in map) {
+        const v = Number(map[k])
+        if (Number.isFinite(v)) total += v
+      }
+
+      const totalEl = document.getElementById('total-clicks')
+      if (totalEl) totalEl.textContent = String(total)
+
+      const links = document.querySelectorAll('a[data-song-id]')
+      links.forEach((a) => {
+        const id = a.getAttribute('data-song-id')
+        const count = Number(map[id] ?? 0)
+        const el = a.querySelector('[data-click-count]')
+        if (el) el.textContent = String(Number.isFinite(count) ? count : 0)
+      })
+
+      applySort(loadSortMode(), map)
+    }
+
+    async function updateUI() {
+      try {
+        clickMap = await loadClicksFromCloud()
+      } catch {
+        clickMap = {}
+      }
+      updateUIFromMap(clickMap)
+    }
+
+    function setSortUI(mode) {
+      const controls = document.querySelectorAll('a[data-sort-mode]')
+      controls.forEach((el) => {
+        const current = el.getAttribute('data-sort-mode') === mode
+        if (current) el.setAttribute('aria-current', 'page')
+        else el.removeAttribute('aria-current')
+      })
+    }
+
+    function getCountByLi(li, clickMap) {
+      const link = li.querySelector('a[data-song-id]')
+      if (!(link instanceof HTMLAnchorElement)) return 0
+      const songId = link.getAttribute('data-song-id')
+      const val = Number(clickMap[songId] ?? 0)
+      return Number.isFinite(val) ? val : 0
+    }
+
+    function showDateGroups() {
+      const groups = document.querySelector('[data-song-groups]')
+      const flatWrap = document.getElementById('song-flat-wrap')
+      const flatList = document.querySelector('[data-song-flat-list]')
+      if (groups instanceof HTMLElement) groups.classList.remove('hidden')
+      if (flatWrap instanceof HTMLElement) flatWrap.classList.add('hidden')
+      if (flatList instanceof HTMLElement) flatList.innerHTML = ''
+    }
+
+    function showPlaySortedFlat(clickMap) {
+      const groups = document.querySelector('[data-song-groups]')
+      const flatWrap = document.getElementById('song-flat-wrap')
+      const flatList = document.querySelector('[data-song-flat-list]')
+      if (!(groups instanceof HTMLElement)) return
+      if (!(flatWrap instanceof HTMLElement)) return
+      if (!(flatList instanceof HTMLElement)) return
+
+      const source = [...groups.querySelectorAll('li[data-collect-ts]')]
+      const sorted = [...source].sort((a, b) => {
+        const countDiff = getCountByLi(b, clickMap) - getCountByLi(a, clickMap)
+        if (countDiff !== 0) return countDiff
+
+        const tsA = Number(a.getAttribute('data-collect-ts') ?? 0)
+        const tsB = Number(b.getAttribute('data-collect-ts') ?? 0)
+        return tsB - tsA
+      })
+
+      flatList.innerHTML = ''
+      for (const li of sorted) {
+        flatList.appendChild(li.cloneNode(true))
+      }
+
+      groups.classList.add('hidden')
+      flatWrap.classList.remove('hidden')
+    }
+
+    function applySort(mode, map = clickMap) {
+      if (mode === 'plays') {
+        showPlaySortedFlat(map)
+      } else {
+        showDateGroups()
+      }
+      setSortUI(mode)
+    }
+
+    document.addEventListener('click', async (e) => {
+      const target = e.target
+      if (!(target instanceof Element)) return
+
+      const sortControl = target.closest('a[data-sort-mode]')
+      if (sortControl instanceof HTMLAnchorElement) {
+        e.preventDefault()
+        const mode = sortControl.getAttribute('data-sort-mode') === 'plays' ? 'plays' : 'date'
+        saveSortMode(mode)
+        applySort(mode)
+        return
+      }
+
+      const link = target.closest('a[data-song-id]')
+      if (!(link instanceof HTMLAnchorElement)) return
+
+      const songId = link.getAttribute('data-song-id')
+      if (!songId) return
+
+      try {
+        await incClickCloud(songId)
+        updateUIFromMap(clickMap)
+      } catch {
+        // ignore
+      }
+    })
+
+    document.addEventListener('DOMContentLoaded', updateUI)
+  </script>
+
+  <style>
+    :global(#main-container) {
+      max-width: 88rem;
+      padding-left: calc(0.75rem + env(safe-area-inset-left));
+      padding-right: calc(0.75rem + env(safe-area-inset-right));
+    }
+
+    @media (min-width: 640px) {
+      :global(#main-container) {
+        padding-left: calc(1.25rem + env(safe-area-inset-left));
+        padding-right: calc(1.25rem + env(safe-area-inset-right));
+      }
+    }
+
+    @media (min-width: 1024px) {
+      :global(#main-container) {
+        padding-left: calc(1.5rem + env(safe-area-inset-left));
+        padding-right: calc(1.5rem + env(safe-area-inset-right));
+      }
+    }
+  </style>
+</PageLayout>

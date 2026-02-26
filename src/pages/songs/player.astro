@@ -1,0 +1,256 @@
+---
+import { getCollection } from 'astro:content'
+import { Button } from 'astro-pure/user'
+import PageLayout from '@/layouts/BaseLayout.astro'
+
+export const prerender = true
+
+const allSongs = (await getCollection('songs')).filter((s) => !s.data.draft)
+const songs = [...allSongs].sort((a, b) => b.data.collectDate.getTime() - a.data.collectDate.getTime())
+
+const songsData = songs.map((s) => ({
+  id: s.id,
+  title: s.data.title ?? null,
+  bvid: s.data.bvid ?? null,
+  videoUrl: s.data.videoUrl ?? null,
+  cover: s.data.cover ?? null,
+  collectDate: s.data.collectDate.toISOString().slice(0, 10),
+  tags: s.data.tags ?? []
+}))
+
+const meta = {
+  title: '播放 · 收藏室',
+  description: '顺序或随机播放收藏室里的视频。'
+}
+---
+
+<PageLayout {meta}>
+  <main class='mt-6 lg:mt-10'>
+    <div id='content-header' class='animate'>
+      <h1 class='mb-2 text-3xl font-medium'>播放</h1>
+      <p class='text-muted-foreground'>支持顺序/随机切换（手动下一首）。</p>
+      <div class='mt-4 flex flex-wrap gap-3'>
+        <Button href='/songs' variant='back' title='返回收藏室'>返回</Button>
+      </div>
+    </div>
+
+    <section class='animate mt-8'>
+      <div class='flex flex-col gap-4 rounded-2xl border bg-muted p-3 sm:p-4'>
+        <div class='flex flex-wrap items-center gap-3'>
+          <Button id='btn-prev' variant='pill' title='上一首'>上一首</Button>
+          <Button id='btn-next' variant='pill' title='下一首'>下一首</Button>
+          <Button id='btn-rand' variant='pill' title='随机来一首'>随机</Button>
+          <span class='text-sm text-muted-foreground'>模式：<samp id='play-mode'>顺序</samp></span>
+          <Button id='btn-toggle' variant='pill' title='切换顺序/随机'>切换模式</Button>
+        </div>
+
+        <div class='flex flex-col gap-1'>
+          <h2 id='song-title' class='text-lg font-medium'>未选择</h2>
+          <p id='song-meta' class='text-sm text-muted-foreground'></p>
+        </div>
+
+        <div class='relative w-full overflow-hidden rounded-xl bg-background'>
+          <div class='aspect-video w-full'>
+            <iframe
+              id='player'
+              class='h-full w-full'
+              src='about:blank'
+              allow='autoplay; fullscreen; picture-in-picture'
+              allowfullscreen
+              loading='lazy'
+              referrerpolicy='strict-origin-when-cross-origin'
+            />
+          </div>
+          <div id='fallback' class='hidden p-4 text-sm text-muted-foreground'>
+            当前链接无法内嵌播放。
+            <a id='open-origin' class='underline' href='#' target='_blank' rel='noreferrer'>打开原视频</a>
+          </div>
+        </div>
+
+        <div class='flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground'>
+          <span>当前：<samp id='song-index'>0</samp>/<samp id='song-total'>0</samp></span>
+          <span class='select-none'>·</span>
+          <span>筛选标签：<samp id='filter-tag'>无</samp></span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script is:inline define:vars={{ SONGS: songsData }}>
+
+    function getQuery() {
+      const url = new URL(window.location.href)
+      return {
+        id: url.searchParams.get('id'),
+        mode: url.searchParams.get('mode') || 'seq',
+        tag: url.searchParams.get('tag')
+      }
+    }
+
+    function setQuery({ id, mode, tag }) {
+      const url = new URL(window.location.href)
+      url.searchParams.set('mode', mode)
+      if (id) url.searchParams.set('id', id)
+      else url.searchParams.delete('id')
+      if (tag) url.searchParams.set('tag', tag)
+      else url.searchParams.delete('tag')
+      history.replaceState({}, '', url.toString())
+    }
+
+    function pickSongsByTag(list, tag) {
+      if (!tag) return list
+      return list.filter((s) => Array.isArray(s.tags) && s.tags.includes(tag))
+    }
+
+    function parseYouTubeId(url) {
+      try {
+        const u = new URL(url)
+        if (u.hostname === 'youtu.be') return u.pathname.replace(/^\//, '')
+        if (u.hostname.endsWith('youtube.com')) return u.searchParams.get('v')
+      } catch {
+        // ignore
+      }
+      return null
+    }
+
+    function parseBvid(url) {
+      const m = String(url || '').match(/\/video\/(BV[0-9A-Za-z]+)(\/|$)/)
+      return m ? m[1] : null
+    }
+
+    function buildEmbedUrl(song) {
+      const bvid = song.bvid || parseBvid(song.videoUrl)
+      if (bvid) {
+        // Bilibili official embed player
+        return `https://player.bilibili.com/player.html?bvid=${encodeURIComponent(bvid)}&autoplay=1`
+      }
+
+      if (song.videoUrl) {
+        const ytId = parseYouTubeId(song.videoUrl)
+        if (ytId) {
+          return `https://www.youtube.com/embed/${encodeURIComponent(ytId)}?autoplay=1&rel=0`
+        }
+      }
+
+      return null
+    }
+
+    function $(id) {
+      return document.getElementById(id)
+    }
+
+    const elTitle = $('song-title')
+    const elMeta = $('song-meta')
+    const elPlayer = /** @type {HTMLIFrameElement} */ ($('player'))
+    const elFallback = $('fallback')
+    const elOpenOrigin = /** @type {HTMLAnchorElement} */ ($('open-origin'))
+
+    const elIndex = $('song-index')
+    const elTotal = $('song-total')
+    const elMode = $('play-mode')
+    const elTag = $('filter-tag')
+
+    const btnPrev = $('btn-prev')
+    const btnNext = $('btn-next')
+    const btnRand = $('btn-rand')
+    const btnToggle = $('btn-toggle')
+
+    let { id: startId, mode, tag } = getQuery()
+
+    let list = pickSongsByTag(SONGS, tag)
+    const total = list.length
+    elTotal.textContent = String(total)
+    elTag.textContent = tag || '无'
+
+    if (total === 0) {
+      elTitle.textContent = '没有可播放的条目'
+      elMeta.textContent = '请检查是否有对应标签的收藏。'
+      elPlayer.src = 'about:blank'
+      elFallback.classList.remove('hidden')
+      elOpenOrigin.href = '/songs'
+      btnPrev.disabled = true
+      btnNext.disabled = true
+      btnRand.disabled = true
+      btnToggle.disabled = true
+    }
+
+    function resolveIndexById(songId) {
+      if (!songId) return 0
+      const idx = list.findIndex((s) => s.id === songId)
+      return idx >= 0 ? idx : 0
+    }
+
+    let idx = resolveIndexById(startId)
+
+    function updateModeLabel() {
+      elMode.textContent = mode === 'rand' ? '随机' : '顺序'
+    }
+
+    function render() {
+      if (total === 0) return
+
+      const song = list[idx]
+      const title = song.title || (song.bvid ? `（未同步）${song.bvid}` : song.id)
+      elTitle.textContent = title
+
+      const metaParts = []
+      if (song.collectDate) metaParts.push(`收藏于 ${song.collectDate}`)
+      if (Array.isArray(song.tags) && song.tags.length) metaParts.push(`标签：${song.tags.join('、')}`)
+      elMeta.textContent = metaParts.join(' · ')
+
+      elIndex.textContent = String(idx + 1)
+      updateModeLabel()
+
+      const embed = buildEmbedUrl(song)
+      if (embed) {
+        elFallback.classList.add('hidden')
+        elPlayer.classList.remove('hidden')
+        elPlayer.src = embed
+      } else {
+        elPlayer.src = 'about:blank'
+        elFallback.classList.remove('hidden')
+      }
+
+      const origin = song.videoUrl || (song.bvid ? `https://www.bilibili.com/video/${song.bvid}/` : '/songs')
+      elOpenOrigin.href = origin
+
+      setQuery({ id: song.id, mode, tag })
+    }
+
+    function nextIndex(step) {
+      if (total === 0) return 0
+      return (idx + step + total) % total
+    }
+
+    function randomIndex() {
+      if (total <= 1) return idx
+      let n = idx
+      while (n === idx) n = Math.floor(Math.random() * total)
+      return n
+    }
+
+    btnPrev?.addEventListener('click', () => {
+      idx = nextIndex(-1)
+      render()
+    })
+
+    btnNext?.addEventListener('click', () => {
+      if (mode === 'rand') idx = randomIndex()
+      else idx = nextIndex(1)
+      render()
+    })
+
+    btnRand?.addEventListener('click', () => {
+      idx = randomIndex()
+      render()
+    })
+
+    btnToggle?.addEventListener('click', () => {
+      mode = mode === 'rand' ? 'seq' : 'rand'
+      updateModeLabel()
+      setQuery({ id: list[idx]?.id, mode, tag })
+    })
+
+    render()
+  </script>
+</PageLayout>

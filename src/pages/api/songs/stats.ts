@@ -32,11 +32,12 @@ async function readPlays(ids: string[]) {
   ensureKvEnv()
   const redis = createRedisClient()
 
-  const values = await redis.hmget(KV_HASH_KEY, ...ids)
+  // @upstash/redis hmget returns an object { field: value, ... } (not an array)
+  const values = await redis.hmget<Record<string, unknown>>(KV_HASH_KEY, ...ids)
   const out: Record<string, number> = {}
-  for (let i = 0; i < ids.length; i++) {
-    const val = Number(values?.[i] ?? 0)
-    out[ids[i]] = Number.isFinite(val) ? val : 0
+  for (const id of ids) {
+    const val = Number(values?.[id] ?? 0)
+    out[id] = Number.isFinite(val) ? val : 0
   }
   return out
 }

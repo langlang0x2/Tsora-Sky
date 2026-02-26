@@ -205,10 +205,13 @@ const meta = {
       const ids = getSongIds()
       if (ids.length === 0) return {}
 
-      const query = encodeURIComponent(ids.join(','))
-      const res = await fetch(`${STATS_API}?ids=${query}`, {
-        method: 'GET',
-        headers: { accept: 'application/json' }
+      const res = await fetch(STATS_API, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          accept: 'application/json'
+        },
+        body: JSON.stringify({ ids })
       })
       if (!res.ok) throw new Error(`Load stats failed: ${res.status}`)
 
@@ -220,6 +223,7 @@ const meta = {
     async function incClickCloud(songId) {
       const res = await fetch(STATS_API, {
         method: 'POST',
+        keepalive: true,
         headers: {
           'content-type': 'application/json'
         },
@@ -257,7 +261,9 @@ const meta = {
       try {
         clickMap = await loadClicksFromCloud()
       } catch {
-        clickMap = {}
+        const totalEl = document.getElementById('total-clicks')
+        if (totalEl) totalEl.textContent = '云端未连接'
+        return
       }
       updateUIFromMap(clickMap)
     }
@@ -347,7 +353,8 @@ const meta = {
         await incClickCloud(songId)
         updateUIFromMap(clickMap)
       } catch {
-        // ignore
+        const totalEl = document.getElementById('total-clicks')
+        if (totalEl) totalEl.textContent = '云端写入失败'
       }
     })
 

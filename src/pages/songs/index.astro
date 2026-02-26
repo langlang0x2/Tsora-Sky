@@ -338,17 +338,6 @@ const meta = {
       }
       media.appendChild(img)
 
-      const tagButton = document.createElement('button')
-      tagButton.type = 'button'
-      tagButton.className =
-        'absolute bottom-2 right-2 z-10 inline-flex h-8 min-w-8 items-center justify-center rounded-full border bg-background/90 px-2 text-sm leading-none text-foreground ring-1 ring-foreground/20 transition hover:bg-background'
-      tagButton.dataset.tagAction = 'add'
-      tagButton.dataset.songSourceId = song.id
-      tagButton.title = '添加标签'
-      tagButton.setAttribute('aria-label', `为 ${song.title} 添加标签`)
-      tagButton.textContent = '⋯'
-      media.appendChild(tagButton)
-
       const body = document.createElement('div')
       body.className = 'min-w-0 mt-2.5 flex flex-1 flex-col'
 

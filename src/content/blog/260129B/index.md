@@ -1,8 +1,8 @@
 ---
-title:       '下载B站收藏夹全部视频并批量根据收藏时间重命名'
-description: ''
+title:       '收藏夹内容'
+description: '自用'
 publishDate: 2026-01-29
-updatedDate: 2026-01-30
+updatedDate: 2026-02-26
 tags:
   - yt-dlp
   - 数据备份
@@ -252,3 +252,17 @@ ffmpeg -i "C:\Archive\1.mkv" `
 ![image-20260130151955394](./assets/image-20260130151955394.png)
 
 **PS：序号0005源丢失【未解决】**
+
+
+#### 六、站内脚本命令补充
+
+收藏夹 CSV 添加进站：
+- `npm run songs:parse-csv -- ./your.csv`
+- `npm run songs:parse-csv -- ./your.csv --overwrite`
+
+同步封面与元信息：
+- `npm run songs:sync:with-cover`（启用封面下载；已有封面会自动跳过）
+- `npm run songs:sync:no-cover`（不下载封面，写入远程封面地址）
+
+按 CSV 批量补标签：
+- `npm run songs:add-tag-from-csv -- ./your.csv tag名称`

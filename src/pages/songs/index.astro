@@ -56,7 +56,7 @@ const songsData = songs.map((song) => {
 })
 
 const meta = {
-  title: '收藏室',
+  title: 'Sound',
   description: '带封面与标签的歌曲收藏，点击卡片直达视频。'
 }
 ---
@@ -64,7 +64,7 @@ const meta = {
 <PageLayout {meta}>
   <main class='mt-6 lg:mt-10'>
     <div id='content-header' class='animate'>
-      <h1 class='mb-2 text-3xl font-medium'>收藏室</h1>
+      <h1 class='mb-2 text-3xl font-medium'>Sound</h1>
       <p class='text-muted-foreground'>点击会在新标签页打开视频，并在本机记录观看次数。</p>
       <p class='mt-3'>总观看次数：<samp id='total-clicks'>0</samp></p>
       <div class='mt-4 flex flex-wrap gap-3' aria-label='Sort mode'>
@@ -84,16 +84,18 @@ const meta = {
     </div>
 
     <div class='mt-6 flex flex-wrap gap-3 animate' aria-label='Tags'>
-      <Button href='/songs' variant='pill' class='items-start gap-x-1' aria-current='page'>
+      <Button href='#' variant='pill' class='items-start gap-x-1' data-tag-reset='1'>
         全部
         <span class='text-xs'>{songs.length}</span>
       </Button>
       {
         allTags.map(([tag, count]) => (
           <Button
-            href={`/songs/tags/${tag}`}
+            href='#'
             variant='pill'
             class='items-start gap-x-1'
+            data-filter-tag={tag}
+            data-filter-state='0'
           >
             {tag}
             <span class='text-xs'>{count}</span>
@@ -137,13 +139,20 @@ const meta = {
 
     let clickMap = {}
     let activeMode = 'date'
+    let isReverseOrder = false
     let searchQuery = ''
+    let tagFilterState = new Map()
     let filteredSongs = SONGS
+    let dateSortedSongs = filteredSongs
     let dateCursor = 0
     let playCursor = 0
     let playSortedSongs = []
     let monthListMap = new Map()
     let observer = null
+    const TAG_INCLUDE_CLASSES = ['text-orange-700', 'border-orange-500/55', 'bg-orange-500/20', 'dark:text-orange-300']
+    const TAG_EXCLUDE_CLASSES = ['text-blue-700', 'border-blue-500/55', 'bg-blue-500/15', 'dark:text-blue-300']
+    const SORT_NORMAL_CLASSES = ['text-orange-700', 'border-orange-500/55', 'bg-orange-500/20', 'dark:text-orange-300']
+    const SORT_REVERSE_CLASSES = ['text-blue-700', 'border-blue-500/55', 'bg-blue-500/15', 'dark:text-blue-300']
 
     function loadSortMode() {
       try {
@@ -179,12 +188,79 @@ const meta = {
       return normalizeText(`${song.title} ${song.note} ${tagsText}`)
     }
 
+    function getTagLists() {
+      const include = []
+      const exclude = []
+      for (const [tag, state] of tagFilterState.entries()) {
+        if (state === 1) include.push(tag)
+        else if (state === -1) exclude.push(tag)
+      }
+      return { include, exclude }
+    }
+
+    function hasAnyTagFilter() {
+      for (const state of tagFilterState.values()) {
+        if (state === 1 || state === -1) return true
+      }
+      return false
+    }
+
+    function matchesTagFilter(song) {
+      const songTags = new Set(
+        (Array.isArray(song.tags) ? song.tags : []).map((tag) => String(tag).toLowerCase())
+      )
+      const { include, exclude } = getTagLists()
+
+      if (include.length > 0) {
+        const hasIncluded = include.some((tag) => songTags.has(String(tag).toLowerCase()))
+        if (!hasIncluded) return false
+      }
+
+      if (exclude.length > 0) {
+        const hasExcluded = exclude.some((tag) => songTags.has(String(tag).toLowerCase()))
+        if (hasExcluded) return false
+      }
+
+      return true
+    }
+
+    function applyTagClass(el, classNames, enabled) {
+      for (const name of classNames) {
+        el.classList.toggle(name, enabled)
+      }
+    }
+
+    function updateTagFilterUI() {
+      const controls = document.querySelectorAll('a[data-filter-tag]')
+      controls.forEach((el) => {
+        const tag = String(el.getAttribute('data-filter-tag') ?? '')
+        const state = Number(tagFilterState.get(tag) ?? 0)
+
+        el.setAttribute('data-filter-state', String(state))
+        el.setAttribute('aria-pressed', state === 0 ? 'false' : 'true')
+        applyTagClass(el, TAG_INCLUDE_CLASSES, state === 1)
+        applyTagClass(el, TAG_EXCLUDE_CLASSES, state === -1)
+      })
+
+      const reset = document.querySelector('a[data-tag-reset]')
+      if (reset instanceof HTMLElement) {
+        const enabled = !hasAnyTagFilter()
+        reset.setAttribute('aria-current', enabled ? 'page' : 'false')
+      }
+    }
+
+    function recomputeFilteredSongs() {
+      const keyword = normalizeText(searchQuery)
+      filteredSongs = SONGS.filter((song) => {
+        const keywordOk = keyword ? buildSongSearchText(song).includes(keyword) : true
+        if (!keywordOk) return false
+        return matchesTagFilter(song)
+      })
+    }
+
     function applySearch(query) {
       searchQuery = String(query ?? '')
-      const keyword = normalizeText(searchQuery)
-      filteredSongs = keyword
-        ? SONGS.filter((song) => buildSongSearchText(song).includes(keyword))
-        : SONGS
+      recomputeFilteredSongs()
       updateSearchSummary()
       applySort(activeMode, clickMap)
     }
@@ -196,9 +272,12 @@ const meta = {
       const total = SONGS.length
       const current = filteredSongs.length
       const keyword = searchQuery.trim()
-      summary.textContent = keyword
-        ? `关键词“${keyword}”：${current} / ${total} 首`
-        : `共 ${total} 首`
+      const { include, exclude } = getTagLists()
+      const includeText = include.length > 0 ? `选中：${include.join('、')}` : ''
+      const excludeText = exclude.length > 0 ? `反选：${exclude.join('、')}` : ''
+      const tagText = [includeText, excludeText].filter(Boolean).join('；')
+      const baseText = keyword ? `关键词“${keyword}”：${current} / ${total} 首` : `共 ${current} / ${total} 首`
+      summary.textContent = tagText ? `${baseText}（${tagText}）` : baseText
     }
 
     function getActiveSongs() {
@@ -333,9 +412,13 @@ const meta = {
     function setSortUI(mode) {
       const controls = document.querySelectorAll('a[data-sort-mode]')
       controls.forEach((el) => {
-        const current = el.getAttribute('data-sort-mode') === mode
+        const currentMode = el.getAttribute('data-sort-mode')
+        const current = currentMode === mode
         if (current) el.setAttribute('aria-current', 'page')
         else el.removeAttribute('aria-current')
+
+        applyTagClass(el, SORT_NORMAL_CLASSES, current && !isReverseOrder)
+        applyTagClass(el, SORT_REVERSE_CLASSES, current && isReverseOrder)
       })
     }
 
@@ -392,10 +475,9 @@ const meta = {
     }
 
     function loadNextDateBatch(map = clickMap) {
-      const activeSongs = getActiveSongs()
-      if (dateCursor >= activeSongs.length) return
+      if (dateCursor >= dateSortedSongs.length) return
 
-      const next = activeSongs.slice(dateCursor, dateCursor + PAGE_SIZE)
+      const next = dateSortedSongs.slice(dateCursor, dateCursor + PAGE_SIZE)
       for (const song of next) {
         const monthList = getOrCreateMonthList(song.ym)
         if (!monthList) continue
@@ -427,7 +509,7 @@ const meta = {
     function hasMore() {
       return activeMode === 'plays'
         ? playCursor < playSortedSongs.length
-        : dateCursor < getActiveSongs().length
+        : dateCursor < dateSortedSongs.length
     }
 
     function updateLoadStatus() {
@@ -482,12 +564,14 @@ const meta = {
       if (activeMode === 'plays') {
         playSortedSongs = [...activeSongs].sort((a, b) => {
           const countDiff = getCountBySong(b, map) - getCountBySong(a, map)
-          if (countDiff !== 0) return countDiff
-          return b.collectTs - a.collectTs
+          if (countDiff !== 0) return isReverseOrder ? -countDiff : countDiff
+          const timeDiff = b.collectTs - a.collectTs
+          return isReverseOrder ? -timeDiff : timeDiff
         })
         showPlaySortedFlat()
         resetPlayRender(map)
       } else {
+        dateSortedSongs = isReverseOrder ? [...activeSongs].reverse() : activeSongs
         showDateGroups()
         resetDateRender(map)
       }
@@ -633,10 +717,37 @@ const meta = {
         return
       }
 
+      const tagReset = target.closest('a[data-tag-reset]')
+      if (tagReset instanceof HTMLAnchorElement) {
+        e.preventDefault()
+        tagFilterState = new Map()
+        updateTagFilterUI()
+        applySearch(searchQuery)
+        return
+      }
+
+      const tagControl = target.closest('a[data-filter-tag]')
+      if (tagControl instanceof HTMLAnchorElement) {
+        e.preventDefault()
+        const tag = String(tagControl.getAttribute('data-filter-tag') ?? '').trim()
+        if (!tag) return
+
+        const currentState = Number(tagFilterState.get(tag) ?? 0)
+        const nextState = currentState === 0 ? 1 : currentState === 1 ? -1 : 0
+        if (nextState === 0) tagFilterState.delete(tag)
+        else tagFilterState.set(tag, nextState)
+
+        updateTagFilterUI()
+        applySearch(searchQuery)
+        return
+      }
+
       const sortControl = target.closest('a[data-sort-mode]')
       if (sortControl instanceof HTMLAnchorElement) {
         e.preventDefault()
         const mode = sortControl.getAttribute('data-sort-mode') === 'plays' ? 'plays' : 'date'
+        if (mode === activeMode) isReverseOrder = !isReverseOrder
+        else isReverseOrder = false
         saveSortMode(mode)
         applySort(mode, clickMap)
         return
@@ -664,6 +775,9 @@ const meta = {
           applySearch(searchInput.value)
         })
       }
+
+      updateTagFilterUI()
+      applySearch(searchInput instanceof HTMLInputElement ? searchInput.value : '')
 
       const mode = loadSortMode()
       applySort(mode, clickMap)

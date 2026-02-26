@@ -71,6 +71,16 @@ const meta = {
         <Button href='#' variant='pill' data-sort-mode='date'>按收藏时间</Button>
         <Button href='#' variant='pill' data-sort-mode='plays'>按播放量</Button>
       </div>
+      <div class='mt-4 rounded-2xl border bg-muted p-3'>
+        <label for='songs-search-input' class='text-sm text-muted-foreground'>搜索（标题 / 备注 / 标签）</label>
+        <input
+          id='songs-search-input'
+          type='search'
+          placeholder='例如：Ado、日语、翻唱'
+          class='mt-2 w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring'
+        />
+        <p id='songs-search-summary' class='mt-2 text-sm text-muted-foreground'>共 {songs.length} 首</p>
+      </div>
     </div>
 
     <div class='mt-6 flex flex-wrap gap-3 animate' aria-label='Tags'>
@@ -109,6 +119,8 @@ const meta = {
               />
             </div>
 
+            <p id='songs-empty-tip' class='mt-6 hidden text-muted-foreground'>没有匹配的收藏。</p>
+
             <div id='songs-load-sentinel' class='h-1 w-full' aria-hidden='true'></div>
             <p id='songs-load-status' class='mt-4 text-sm text-muted-foreground'>加载中…</p>
           </>
@@ -120,10 +132,13 @@ const meta = {
   <script is:inline define:vars={{ SONGS: songsData }}>
     const SORT_MODE_KEY = 'tsora-songs-sort-mode-v1'
     const STATS_API = '/api/songs/stats'
+    const TAG_API = '/api/songs/tag'
     const PAGE_SIZE = 24
 
     let clickMap = {}
     let activeMode = 'date'
+    let searchQuery = ''
+    let filteredSongs = SONGS
     let dateCursor = 0
     let playCursor = 0
     let playSortedSongs = []
@@ -151,6 +166,53 @@ const meta = {
       return SONGS
         .map((song) => song.statKey)
         .filter((id) => typeof id === 'string' && id.length > 0)
+    }
+
+    function normalizeText(value) {
+      return String(value ?? '')
+        .toLowerCase()
+        .replace(/\s+/g, '')
+    }
+
+    function buildSongSearchText(song) {
+      const tagsText = Array.isArray(song.tags) ? song.tags.join(' ') : ''
+      return normalizeText(`${song.title} ${song.note} ${tagsText}`)
+    }
+
+    function applySearch(query) {
+      searchQuery = String(query ?? '')
+      const keyword = normalizeText(searchQuery)
+      filteredSongs = keyword
+        ? SONGS.filter((song) => buildSongSearchText(song).includes(keyword))
+        : SONGS
+      updateSearchSummary()
+      applySort(activeMode, clickMap)
+    }
+
+    function updateSearchSummary() {
+      const summary = document.getElementById('songs-search-summary')
+      if (!(summary instanceof HTMLElement)) return
+
+      const total = SONGS.length
+      const current = filteredSongs.length
+      const keyword = searchQuery.trim()
+      summary.textContent = keyword
+        ? `关键词“${keyword}”：${current} / ${total} 首`
+        : `共 ${total} 首`
+    }
+
+    function getActiveSongs() {
+      return filteredSongs
+    }
+
+    function updateEmptyState() {
+      const emptyTip = document.getElementById('songs-empty-tip')
+      const sentinel = document.getElementById('songs-load-sentinel')
+      if (!(emptyTip instanceof HTMLElement)) return
+
+      const isEmpty = getActiveSongs().length === 0
+      emptyTip.classList.toggle('hidden', !isEmpty)
+      if (sentinel instanceof HTMLElement) sentinel.classList.toggle('hidden', isEmpty)
     }
 
     function getCountBySong(song, map = clickMap) {
@@ -196,6 +258,17 @@ const meta = {
         img.src = '/images/social-card.png'
       }
       media.appendChild(img)
+
+      const tagButton = document.createElement('button')
+      tagButton.type = 'button'
+      tagButton.className =
+        'absolute bottom-2 right-2 z-10 inline-flex h-8 min-w-8 items-center justify-center rounded-full border bg-background/90 px-2 text-sm leading-none text-foreground/80 transition hover:bg-background'
+      tagButton.dataset.tagAction = 'add'
+      tagButton.dataset.songSourceId = song.id
+      tagButton.title = '添加标签'
+      tagButton.setAttribute('aria-label', `为 ${song.title} 添加标签`)
+      tagButton.textContent = '⋯'
+      media.appendChild(tagButton)
 
       const body = document.createElement('div')
       body.className = 'min-w-0 mt-2.5 flex flex-1 flex-col'
@@ -314,13 +387,15 @@ const meta = {
     function resetDateRender(map = clickMap) {
       dateCursor = 0
       clearDateGroups()
+      updateEmptyState()
       loadNextDateBatch(map)
     }
 
     function loadNextDateBatch(map = clickMap) {
-      if (dateCursor >= SONGS.length) return
+      const activeSongs = getActiveSongs()
+      if (dateCursor >= activeSongs.length) return
 
-      const next = SONGS.slice(dateCursor, dateCursor + PAGE_SIZE)
+      const next = activeSongs.slice(dateCursor, dateCursor + PAGE_SIZE)
       for (const song of next) {
         const monthList = getOrCreateMonthList(song.ym)
         if (!monthList) continue
@@ -333,6 +408,7 @@ const meta = {
       playCursor = 0
       const flatList = document.querySelector('[data-song-flat-list]')
       if (flatList instanceof HTMLElement) flatList.innerHTML = ''
+      updateEmptyState()
       loadNextPlayBatch(map)
     }
 
@@ -349,12 +425,18 @@ const meta = {
     }
 
     function hasMore() {
-      return activeMode === 'plays' ? playCursor < playSortedSongs.length : dateCursor < SONGS.length
+      return activeMode === 'plays'
+        ? playCursor < playSortedSongs.length
+        : dateCursor < getActiveSongs().length
     }
 
     function updateLoadStatus() {
       const status = document.getElementById('songs-load-status')
       if (!(status instanceof HTMLElement)) return
+      if (getActiveSongs().length === 0) {
+        status.textContent = ''
+        return
+      }
       status.textContent = hasMore() ? '继续下滑以加载更多…' : '已加载全部内容'
     }
 
@@ -396,8 +478,9 @@ const meta = {
 
     function applySort(mode, map = clickMap) {
       activeMode = mode === 'plays' ? 'plays' : 'date'
+      const activeSongs = getActiveSongs()
       if (activeMode === 'plays') {
-        playSortedSongs = [...SONGS].sort((a, b) => {
+        playSortedSongs = [...activeSongs].sort((a, b) => {
           const countDiff = getCountBySong(b, map) - getCountBySong(a, map)
           if (countDiff !== 0) return countDiff
           return b.collectTs - a.collectTs
@@ -413,6 +496,46 @@ const meta = {
       updateLoadStatus()
       setupObserver()
       fillViewport()
+    }
+
+    async function addTagToSource(songId, tag) {
+      const res = await fetch(TAG_API, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          accept: 'application/json'
+        },
+        body: JSON.stringify({ songId, tag })
+      })
+
+      let payload = null
+      try {
+        payload = await res.json()
+      } catch {
+        // ignore
+      }
+
+      if (!res.ok) {
+        const message = payload?.message || `Add tag failed: ${res.status}`
+        throw new Error(message)
+      }
+
+      return payload
+    }
+
+    function syncSongTagInMemory(songId, tag) {
+      const target = SONGS.find((song) => song.id === songId)
+      if (!target) return
+
+      if (!Array.isArray(target.tags)) {
+        target.tags = [tag]
+        return
+      }
+
+      const existed = target.tags.some(
+        (value) => String(value).toLowerCase() === String(tag).toLowerCase()
+      )
+      if (!existed) target.tags.push(tag)
     }
 
     async function loadClicksFromCloud() {
@@ -483,6 +606,33 @@ const meta = {
       const target = e.target
       if (!(target instanceof Element)) return
 
+      const tagAction = target.closest('button[data-tag-action]')
+      if (tagAction instanceof HTMLButtonElement) {
+        e.preventDefault()
+        e.stopPropagation()
+
+        const sourceId = String(tagAction.dataset.songSourceId ?? '').trim()
+        if (!sourceId) return
+
+        const value = window.prompt('输入要添加的标签')
+        const nextTag = String(value ?? '').trim()
+        if (!nextTag) return
+
+        try {
+          const result = await addTagToSource(sourceId, nextTag)
+          if (result?.added) {
+            syncSongTagInMemory(sourceId, nextTag)
+            applySearch(searchQuery)
+            window.alert(`已添加标签：${nextTag}`)
+          } else {
+            window.alert('该标签已存在，无需重复添加。')
+          }
+        } catch (err) {
+          window.alert(String((err && err.message) || err || '添加标签失败'))
+        }
+        return
+      }
+
       const sortControl = target.closest('a[data-sort-mode]')
       if (sortControl instanceof HTMLAnchorElement) {
         e.preventDefault()
@@ -508,6 +658,13 @@ const meta = {
     })
 
     document.addEventListener('DOMContentLoaded', () => {
+      const searchInput = document.getElementById('songs-search-input')
+      if (searchInput instanceof HTMLInputElement) {
+        searchInput.addEventListener('input', () => {
+          applySearch(searchInput.value)
+        })
+      }
+
       const mode = loadSortMode()
       applySort(mode, clickMap)
       updateUI()

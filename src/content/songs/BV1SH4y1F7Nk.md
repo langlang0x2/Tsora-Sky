@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1SH4y1F7Nk.jpg'
 
 title: '等一个自然而然的晴天  我想要带你去海边！！！想去海边！'

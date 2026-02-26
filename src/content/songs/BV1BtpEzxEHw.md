@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1BtpEzxEHw.jpg'
 
 title: '【折原露露】小小（Hi-Res）'

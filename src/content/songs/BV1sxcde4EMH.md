@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1sxcde4EMH.jpg'
 
 title: '♪我姑的一个道上朋友♪'

@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1tkjnzAEg7.jpg'
 
 title: '唱了一首林宥嘉的《怪情歌 A Strange Love Song》'

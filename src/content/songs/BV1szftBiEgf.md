@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1szftBiEgf.jpg'
 
 title: '撕心裂肺的全是爱↑↓↑↓←→（Hi-Res）【折原露露】'

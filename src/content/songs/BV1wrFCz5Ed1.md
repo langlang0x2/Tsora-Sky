@@ -1,4 +1,5 @@
 ---
+
 cover: '/songs-covers/BV1wrFCz5Ed1.jpg'
 
 title: '好兄弟！心里有苦你对我说！！丨我的好兄弟'

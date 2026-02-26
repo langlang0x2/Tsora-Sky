@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1BQ6yBoEC1.jpg'
 
 title: '像风一样（Hi-Res）【折原露露】'

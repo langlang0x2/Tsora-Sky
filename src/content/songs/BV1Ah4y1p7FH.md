@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1Ah4y1p7FH.jpg'
 
 title: '【折原露露】《快乐崇拜》包括但不限于弹舌、口胡、多声线、摆烂，过于欢乐'

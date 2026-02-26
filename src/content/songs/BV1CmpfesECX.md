@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1CmpfesECX.jpg'
 
 title: '【折原露露】《玫瑰花的葬礼》埋葬深爱着的你~'

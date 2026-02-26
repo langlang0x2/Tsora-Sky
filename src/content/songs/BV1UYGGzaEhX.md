@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1UYGGzaEhX.jpg'
 
 title: '【莫愁乡】♪“真正的勇敢不是不落泪， 是含着泪仍愿意善待自己。”'

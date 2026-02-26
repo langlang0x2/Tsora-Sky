@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1Me411R7sy.jpg'
 
 title: '♫「芙宁娜的胜利宣言」♪以我之名，欢唱《呜哇哈哈哈》【枫丹角色原创曲】'

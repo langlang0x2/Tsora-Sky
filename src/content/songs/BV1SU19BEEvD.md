@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1SU19BEEvD.jpg'
 
 title: '温柔（Hi-Res）【折原露露】'

@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1ug1yBWEQ9.jpg'
 
 title: '美猴亡'

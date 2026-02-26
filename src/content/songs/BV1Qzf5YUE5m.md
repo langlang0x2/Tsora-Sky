@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1Qzf5YUE5m.jpg'
 
 title: '我从来没想过我会这样做♬从来没爱过所以♪爱错♪'

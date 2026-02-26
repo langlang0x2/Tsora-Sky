@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV15rf7BsE7U.jpg'
 
 title: '一个人一支烟，走到夕阳落在身后【荒漠上行走】'

@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1GcHWz4EFe.jpg'
 
 title: '【折原露露】大哥和自己合唱熄灭（Hi-Res）'

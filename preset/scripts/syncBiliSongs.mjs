@@ -190,12 +190,27 @@ async function fileExists(p) {
   }
 }
 
+async function findExistingCoverPublicPath(bvid) {
+  const exts = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif']
+  for (const ext of exts) {
+    const fileName = `${bvid}.${ext}`
+    const absPath = path.join(COVERS_DIR, fileName)
+    if (await fileExists(absPath)) {
+      return `/songs-covers/${fileName}`
+    }
+  }
+  return null
+}
+
 async function downloadCoverToPublic({ coverUrl, bvid }) {
   if (!SHOULD_DOWNLOAD_COVERS) return null
   if (!coverUrl || typeof coverUrl !== 'string') return null
   if (!coverUrl.startsWith('http')) return null
 
   await ensureDir(COVERS_DIR)
+
+  const existing = await findExistingCoverPublicPath(bvid)
+  if (existing) return existing
 
   const res = await fetch(coverUrl, {
     redirect: 'follow',

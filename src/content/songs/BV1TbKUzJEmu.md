@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1TbKUzJEmu.jpg'
 
 title: '群星闪耀！催泪大合唱《送你一朵小红花》致每一位努力生活的你❀'

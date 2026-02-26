@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1V4tozuEkX.jpg'
 
 title: '我只是个爱你的笨蛋♪【寂寞寂寞不好】'

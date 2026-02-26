@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1JXksBGEwQ.jpg'
 
 title: '发呆(｀・ω・´)'

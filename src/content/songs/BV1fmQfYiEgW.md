@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1fmQfYiEgW.jpg'
 
 title: '石川大阪友好条约【折原露露】'
@@ -8,4 +9,5 @@ videoUrl: 'https://www.bilibili.com/video/BV1fmQfYiEgW/'
 collectDate: 2025-03-19
 tags:
   - 麂子歌
+  - '日语'
 ---

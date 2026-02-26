@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV18XQDYcEcK.jpg'
 
 title: 'One Night In Shanghai~【折原露露】'

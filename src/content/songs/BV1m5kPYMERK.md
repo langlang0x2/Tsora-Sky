@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1m5kPYMERK.jpg'
 
 title: '【折原露露】静悄悄~世界突然变得好安静~'

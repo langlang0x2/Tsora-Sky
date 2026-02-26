@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV12JzEBfEvE.jpg'
 
 title: '简简单单（Hi-Res）【折原露露】'

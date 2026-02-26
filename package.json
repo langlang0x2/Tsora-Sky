@@ -19,7 +19,8 @@
     "songs:sync": "node preset/scripts/syncBiliSongs.mjs",
     "songs:sync:no-cover": "cross-env SONGS_SYNC_DOWNLOAD=0 node preset/scripts/syncBiliSongs.mjs",
     "songs:sync:with-cover": "cross-env SONGS_SYNC_DOWNLOAD=1 node preset/scripts/syncBiliSongs.mjs",
-    "songs:parse-csv": "node preset/scripts/parseSongsCsv.mjs"
+    "songs:parse-csv": "node preset/scripts/parseSongsCsv.mjs",
+    "songs:add-tag-from-csv": "node preset/scripts/addTagFromCsv.mjs"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.6",

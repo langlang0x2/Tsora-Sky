@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1vsyrBpE1Z.jpg'
 
 title: '他走我留 丨他走为众生求经 我留为一国掌灯 他的路通西天 我的路通黎明'

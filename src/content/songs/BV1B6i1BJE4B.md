@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1B6i1BJE4B.jpg'
 
 title: '我的好兄弟（Hi-Res）【折原露露】'

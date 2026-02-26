@@ -145,6 +145,16 @@ const meta = {
                                   onerror="this.onerror=null;this.src='/images/social-card.png'"
                                   class='absolute inset-0 h-full w-full object-cover'
                                 />
+                                <button
+                                  type='button'
+                                  class='absolute bottom-2 right-2 z-10 inline-flex h-8 min-w-8 items-center justify-center rounded-full border bg-background/90 px-2 text-sm leading-none text-foreground ring-1 ring-foreground/20'
+                                  title='添加标签'
+                                  aria-label={`为 ${title} 添加标签`}
+                                  data-tag-action='add'
+                                  data-song-source-id={song.id}
+                                >
+                                  ⋯
+                                </button>
                               </div>
                               <div class='min-w-0 mt-2.5 flex flex-1 flex-col'>
                                 <h3 class='line-clamp-2 text-base font-medium sm:text-lg'>{title}</h3>
@@ -193,6 +203,7 @@ const meta = {
   <script is:inline>
     const SORT_MODE_KEY = 'tsora-songs-sort-mode-v1'
     const STATS_API = '/api/songs/stats'
+    const TAG_API = '/api/songs/tag'
     let clickMap = {}
 
     function loadSortMode() {
@@ -261,6 +272,31 @@ const meta = {
       const data = await res.json()
       const plays = Number(data?.plays ?? 0)
       clickMap[songId] = Number.isFinite(plays) ? plays : 0
+    }
+
+    async function addTagToSource(songId, tag) {
+      const res = await fetch(TAG_API, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          accept: 'application/json'
+        },
+        body: JSON.stringify({ songId, tag })
+      })
+
+      let payload = null
+      try {
+        payload = await res.json()
+      } catch {
+        // ignore
+      }
+
+      if (!res.ok) {
+        const message = payload?.message || `Add tag failed: ${res.status}`
+        throw new Error(message)
+      }
+
+      return payload
     }
 
     function updateUIFromMap(map = clickMap) {
@@ -360,6 +396,27 @@ const meta = {
     document.addEventListener('click', async (e) => {
       const target = e.target
       if (!(target instanceof Element)) return
+
+      const tagAction = target.closest('button[data-tag-action]')
+      if (tagAction instanceof HTMLButtonElement) {
+        e.preventDefault()
+        e.stopPropagation()
+
+        const sourceId = String(tagAction.dataset.songSourceId ?? '').trim()
+        if (!sourceId) return
+
+        const value = window.prompt('输入要添加的标签')
+        const nextTag = String(value ?? '').trim()
+        if (!nextTag) return
+
+        try {
+          const result = await addTagToSource(sourceId, nextTag)
+          window.alert(result?.added ? `已添加标签：${nextTag}` : '该标签已存在，无需重复添加。')
+        } catch (err) {
+          window.alert(String((err && err.message) || err || '添加标签失败'))
+        }
+        return
+      }
 
       const sortControl = target.closest('a[data-sort-mode]')
       if (sortControl instanceof HTMLAnchorElement) {

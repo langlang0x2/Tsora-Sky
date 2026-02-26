@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1Se411X7hD.jpg'
 
 title: '⚡易燃易爆炸⚡丨"夸我含苞待放 还夸我欲盖弥彰"'

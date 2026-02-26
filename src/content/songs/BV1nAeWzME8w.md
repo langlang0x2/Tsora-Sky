@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1nAeWzME8w.jpg'
 
 title: '【折原露露】逆光(ウタ from ONE PIECE FILM RED)'

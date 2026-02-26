@@ -1,5 +1,6 @@
 ---
 
+
 cover: '/songs-covers/BV1xn4y1d7gd.jpg'
 
 title: '我祝明天高考的宝贝“金榜题名”♥♥♥'

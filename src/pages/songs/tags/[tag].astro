@@ -134,7 +134,7 @@ const meta = {
                               href={videoUrl}
                               target='_blank'
                               rel='noreferrer'
-                              data-song-id={song.id}
+                              data-song-id={song.data.bvid ?? song.id}
                             >
                               <div class='relative aspect-video w-full overflow-hidden rounded-xl bg-background'>
                                 <img

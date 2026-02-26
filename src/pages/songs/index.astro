@@ -43,6 +43,7 @@ const songsData = songs.map((song) => {
 
   return {
     id: song.id,
+    statKey: song.data.bvid ?? song.id,
     title,
     note: song.data.note ?? '',
     tags: song.data.tags,
@@ -148,12 +149,12 @@ const meta = {
 
     function getSongIds() {
       return SONGS
-        .map((song) => song.id)
+        .map((song) => song.statKey)
         .filter((id) => typeof id === 'string' && id.length > 0)
     }
 
     function getCountBySong(song, map = clickMap) {
-      const val = Number(map[song.id] ?? 0)
+      const val = Number(map[song.statKey] ?? 0)
       return Number.isFinite(val) ? val : 0
     }
 
@@ -179,7 +180,7 @@ const meta = {
       link.href = song.videoUrl
       link.target = '_blank'
       link.rel = 'noreferrer'
-      link.dataset.songId = song.id
+      link.dataset.songId = song.statKey
 
       const media = document.createElement('div')
       media.className = 'relative aspect-video w-full overflow-hidden rounded-xl bg-background'

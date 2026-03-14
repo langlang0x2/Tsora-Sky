@@ -1,7 +1,7 @@
 ---
 title:       'Blog使用手册'
 publishDate: 2026-01-29
-updatedDate: 2026-01-29
+updatedDate: 2026-03-14
 description: '如何使用blog'
 tags:
   - blog
@@ -43,3 +43,15 @@ draft: true 【正常不写】
 评论数据库：neon https://console.neon.tech/
 
 PS：用mongodb资源请求超时，怎么改环境变量都不行，换节点也不行，直接放弃mongodb用vercel的neno了
+
+
+
+## 三、工具
+
+**docx**转**md**工具：**pandoc **
+--extract-media=assets 为指定**图片**保存在**./assets/media**里面
+
+```bash
+pandoc input.docx -o index.md --extract-media=assets
+```
+

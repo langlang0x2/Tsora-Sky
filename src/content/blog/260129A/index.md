@@ -41,6 +41,14 @@ draft: true 【正常不写】
 评论：waline 文档 https://waline.js.org/guide
 
 评论数据库：neon https://console.neon.tech/
+github登录
+
+| # | table_name |
+| : | :--------- |
+| 1 | wl_comment |
+| 2 | wl_counter |
+| 3 | wl_users   |
+| 4 | page_views | //我建立的统计次数表
 
 PS：用mongodb资源请求超时，怎么改环境变量都不行，换节点也不行，直接放弃mongodb用vercel的neno了
 

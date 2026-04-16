@@ -5,26 +5,42 @@ export const prerender = false
 
 const KV_HASH_KEY = 'songs:clicks:v1'
 
+function getRedisRestEnv() {
+  const url =
+    process.env.STORAGE_KV_REST_API_URL ??
+    process.env.STORAGE_UPSTASH_REDIS_REST_URL ??
+    process.env.KV_REST_API_URL ??
+    process.env.UPSTASH_REDIS_REST_URL
+
+  const token =
+    process.env.STORAGE_KV_REST_API_TOKEN ??
+    process.env.STORAGE_UPSTASH_REDIS_REST_TOKEN ??
+    process.env.KV_REST_API_TOKEN ??
+    process.env.UPSTASH_REDIS_REST_TOKEN
+
+  return { url, token }
+}
+
 function createRedisClient() {
-  const url = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL
-  const token = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN
+  const { url, token } = getRedisRestEnv()
   if (!url || !token) {
     throw new Error(
-      'Redis is not configured. Missing KV_REST_API_URL/KV_REST_API_TOKEN or UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN.'
+      'Redis is not configured. Missing STORAGE_KV_REST_API_URL/STORAGE_KV_REST_API_TOKEN (or STORAGE_UPSTASH_REDIS_REST_URL/STORAGE_UPSTASH_REDIS_REST_TOKEN), or KV_REST_API_URL/KV_REST_API_TOKEN (or UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN).'
     )
   }
   return new Redis({ url, token })
 }
 
 function hasKvEnv() {
-  const url = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL
-  const token = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN
+  const { url, token } = getRedisRestEnv()
   return Boolean(url && token)
 }
 
 function ensureKvEnv() {
   if (!hasKvEnv()) {
-    throw new Error('Vercel KV is not configured. Missing KV_REST_API_URL or KV_REST_API_TOKEN.')
+    throw new Error(
+      'KV is not configured. Missing STORAGE_KV_REST_API_URL/STORAGE_KV_REST_API_TOKEN (or STORAGE_UPSTASH_REDIS_REST_URL/STORAGE_UPSTASH_REDIS_REST_TOKEN).'
+    )
   }
 }
 

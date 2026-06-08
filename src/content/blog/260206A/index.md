@@ -1,4 +1,5 @@
 ---
+draft: true
 title: "冷备份：长期存储介质整理"
 description: "记录照片/视频的冷备份原则、维护频率与存储介质清单。"
 publishDate: 2026-02-06

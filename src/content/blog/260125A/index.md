@@ -1,4 +1,5 @@
 ---
+draft: true
 title:       'git使用'
 description: '记录如何使用git以及约定式提交'
 publishDate: 2026-01-07

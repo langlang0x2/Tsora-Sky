@@ -1,14 +1,13 @@
 ---
 import { Image } from 'astro:assets'
 
-import { Button, Collapse, Icon } from 'astro-pure/user'
 import PageLayout from '@/layouts/CommonPage.astro'
 import ProjectSection from '@/components/projects/ProjectSection.astro'
 import Sponsors from '@/components/projects/Sponsors.astro'
-import Sponsorship from '@/components/projects/Sponsorship.astro'
-import alipay from '@/assets/alipay-qrcode.jpg'
-import KeyIcon from '@/assets/icons/key.svg'
-import wechat from '@/assets/wechat-qrcode.jpg'
+// import Sponsorship from '@/components/projects/Sponsorship.astro'
+// import alipay from '@/assets/alipay-qrcode.jpg'
+// import KeyIcon from '@/assets/icons/key.svg'
+// import wechat from '@/assets/wechat-qrcode.jpg'
 
 const headings = [
   { depth: 2, slug: 'programs', text: 'Programs' },
@@ -21,12 +20,13 @@ const headings = [
 
 <PageLayout title='Projects' {headings} view>
   <!-- #region header -->
-  <p>
+  <!-- 暂时隐藏赞助 -->
+  <!-- <p>
     如果你认为我的工作很有用或有趣，您可以捐赠以支持我的工作，或联系我讨论项目。
   </p>
   <Button title='赞赏我的工作' class='w-fit' href='#sponsorship'>
     <Icon class='size-5' name='receive-money' slot='before' />
-  </Button>
+  </Button> -->
   <!-- #endregion -->
   
   <!-- #region 项目展示 -->
@@ -84,13 +84,12 @@ const headings = [
   </Button> -->
   <!-- #endregion -->
 
-  <!-- #region 支持收款 -->
-  <h2 id='sponsorship'>Sponsorship</h2>
+  <!-- #region 支持收款（暂时隐藏） -->
+  <!-- <h2 id='sponsorship'>Sponsorship</h2>
   <p>感谢您的支持，您的支持是我最大的动力。</p>
   <Sponsorship
     methods={[
       { name: 'WeChat', icon: 'wechat-pay', image: wechat },
-      // { name: 'Alipay', icon: 'alipay', image: alipay }
     ]}
   />
   <p>支持后请留言或主动联系我。我的邮箱是：
@@ -98,7 +97,7 @@ const headings = [
       onclick='const m=atob(this.textContent);alert(m);window.open(`mailto:${m}`,"_blank")'
     >MTM1MjQ1MzM0MEBxcS5jb20=</code>
     (点击代码解码base64).
-  </p>
+  </p> -->
   <!-- #endregion -->
 
 </PageLayout>

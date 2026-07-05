@@ -3,6 +3,7 @@ import { getCollection } from 'astro:content'
 
 import { Button } from 'astro-pure/user'
 import PageLayout from '@/layouts/BaseLayout.astro'
+import PasswordGate from '@/components/PasswordGate.astro'
 
 export const prerender = true
 
@@ -62,6 +63,7 @@ const meta = {
 ---
 
 <PageLayout {meta}>
+  <PasswordGate>
   <main class='mt-6 lg:mt-10'>
     <div id='content-header' class='animate'>
       <h1 class='mb-2 text-3xl font-medium'>Sound</h1>
@@ -130,6 +132,7 @@ const meta = {
       }
     </section>
   </main>
+  </PasswordGate>
 
   <script is:inline define:vars={{ SONGS: songsData }}>
     const SORT_MODE_KEY = 'tsora-songs-sort-mode-v1'

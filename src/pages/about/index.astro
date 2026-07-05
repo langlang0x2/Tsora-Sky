@@ -1,12 +1,11 @@
 ---
-import { Button, Collapse, Spoiler, Timeline } from 'astro-pure/user'
+import { Timeline } from 'astro-pure/user'
 import PageLayout from '@/layouts/CommonPage.astro'
 import Substats from '@/components/about/Substats.astro'
 import ToolSection from '@/components/about/ToolSection.astro'
 
 const headings = [
   { depth: 2, slug: 'social-networks', text: 'Social Networks' },
-  { depth: 2, slug: 'hobbies', text: 'Hobbies' },
   { depth: 2, slug: 'tools', text: 'Tools' },
   { depth: 2, slug: 'gossips', text: 'Gossips' },
   { depth: 2, slug: 'about-blog', text: 'About Blog' }
@@ -22,7 +21,7 @@ const headings = [
   <p>
     You can find some related links below. Feel free to reach out and connect.
   </p>
-  <Button title='Sponsor Me' class='w-fit' href='/projects#sponsorship' variant='ahead' />
+  <!-- <Button title='Sponsor Me' class='w-fit' href='/projects#sponsorship' variant='ahead' /> -->
 
   <!-- #region 社交媒体 -->
   <h2 id='social-networks'>Social Networks</h2>
@@ -35,14 +34,6 @@ const headings = [
         link: 'https://github.com/langlang0x2',
         text: 'followers',
         api: 'github/langlang0x2'
-      },
-      {
-        platform: 'Steam',
-        icon: 'steam',
-        color: '#50769d',
-        link: 'https://steamcommunity.com/id/langlang0x2',
-        text: 'games',
-        api: 'steamgames/76561199642959275'
       },
       {
         platform: '哔哩哔哩',
@@ -62,8 +53,8 @@ const headings = [
   />
   <!-- #endregion -->
 
-  <!-- #region 爱好（没写） -->
-  <h2 id='hobbies'>Hobbies</h2>
+  <!-- #region 爱好（暂时隐藏） -->
+  <!-- <h2 id='hobbies'>Hobbies</h2>
   <ul>
     <li>
       网络冲浪，经常浏览各类帖子
@@ -72,13 +63,13 @@ const headings = [
       音乐，各种类型都听
     </li>
     <li>
-      游戏，“轻度”娱乐
+      游戏，”轻度”娱乐
       <Spoiler>有时候会打一整天</Spoiler>
     </li>
     <li>
       发呆或做些不知道什么意义的事蹉跎光阴
     </li>
-  </ul>
+  </ul> -->
   <!-- #endregion -->
   
   <!-- #region 用的工具 -->
@@ -173,10 +164,10 @@ const headings = [
   <p>Website history:</p>
   <Timeline
     events={[
-      {
+      <!-- {
         date: '2026-02-26',
-        content: 'Completed the Sound section today, but I hid it from the homepage navigation'
-      },
+        content: 'Completed the Sound section today'
+      }, -->
       {
         date: '2026-01-26',
         content: 'Completed the blog setup with <a href="https://astro.build/" target="_blank">Astro</a> and <a href="https://github.com/cworld1/astro-theme-pure" target="_blank">Astro Theme Pure</a>'

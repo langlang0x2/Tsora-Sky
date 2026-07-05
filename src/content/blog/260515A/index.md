@@ -6,7 +6,7 @@ description: '降低判断一个历史是否满足一种一致性模型花费的
 tags:
   - 分布式系统
   - 一致性模型
-  - alloy*
+  - alloy-star
 language: 'zh-CN'
 ---
 # 一、一致性模型拓展框架

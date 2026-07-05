@@ -10,6 +10,14 @@ const headings = [
   { depth: 2, slug: 'gossips', text: 'Gossips' },
   { depth: 2, slug: 'about-blog', text: 'About Blog' }
 ]
+
+const timelineEvents = [
+  // { date: '2026-02-26', content: 'Completed the Sound section today' },
+  { date: '2026-01-26', content: 'Completed the blog setup with <a href="https://astro.build/" target="_blank">Astro</a> and <a href="https://github.com/cworld1/astro-theme-pure" target="_blank">Astro Theme Pure</a>' },
+  { date: '2026-01-25', content: 'Bought my first domain in life <a href="https://tsora.me/" target="_blank">tsora.me</a>' },
+  { date: '2026-01-23', content: 'Began making website' },
+  { date: '2026-01-13', content: "Inspired by a senior's website, I decided to create my own" }
+]
 ---
 
 <PageLayout title='About' {headings} comment>
@@ -162,30 +170,7 @@ const headings = [
   <!-- #region 关于本站 -->
   <h2 id='about-blog'>About Blog</h2>
   <p>Website history:</p>
-  <Timeline
-    events={[
-      <!-- {
-        date: '2026-02-26',
-        content: 'Completed the Sound section today'
-      }, -->
-      {
-        date: '2026-01-26',
-        content: 'Completed the blog setup with <a href="https://astro.build/" target="_blank">Astro</a> and <a href="https://github.com/cworld1/astro-theme-pure" target="_blank">Astro Theme Pure</a>'
-      },
-      {
-        date: '2026-01-25',
-        content: 'Bought my first domain in life <a href="https://tsora.me/" target="_blank">tsora.me</a>'
-      },
-      {
-        date: '2026-01-23',
-        content: 'Began making website'
-      },
-      {
-        date: '2026-01-13',
-        content: 'Inspired by a senior’s website, I decided to create my own'
-      }
-    ]}
-  />
+  <Timeline events={timelineEvents} />
   <p>
     The smooth operation and personalized customization of website also rely on the resources and
     technical support provided by the following excellent projects/service providers:

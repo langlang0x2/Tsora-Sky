@@ -1,11 +1,11 @@
 ---
 import { Timeline } from 'astro-pure/user'
 import PageLayout from '@/layouts/CommonPage.astro'
-import Substats from '@/components/about/Substats.astro'
+// import Substats from '@/components/about/Substats.astro'
 import ToolSection from '@/components/about/ToolSection.astro'
 
 const headings = [
-  { depth: 2, slug: 'social-networks', text: 'Social Networks' },
+  // { depth: 2, slug: 'social-networks', text: 'Social Networks' },
   { depth: 2, slug: 'tools', text: 'Tools' },
   { depth: 2, slug: 'gossips', text: 'Gossips' },
   { depth: 2, slug: 'about-blog', text: 'About Blog' }
@@ -26,40 +26,7 @@ const timelineEvents = [
     I am an undergraduate student majoring in Software Engineering.
     This blog is used to record my learning notes, project experiences, and occasional thoughts.
   </p>
-  <p>
-    You can find some related links below. Feel free to reach out and connect.
-  </p>
-  <!-- <Button title='Sponsor Me' class='w-fit' href='/projects#sponsorship' variant='ahead' /> -->
-
-  <!-- #region 社交媒体 -->
-  <h2 id='social-networks'>Social Networks</h2>
-  <p>你可以在以下平台找到我：</p>
-  <Substats
-    stats={[
-      {
-        platform: 'GitHub',
-        icon: 'github',
-        link: 'https://github.com/langlang0x2',
-        text: 'followers',
-        api: 'github/langlang0x2'
-      },
-      {
-        platform: '哔哩哔哩',
-        icon: 'bilibili',
-        link: 'https://space.bilibili.com/433511928',
-        text: 'followers',
-        api: 'bilibili/433511928'
-      },
-      {
-        platform: '知乎',
-        icon: 'zhihu',
-        link: 'https://www.zhihu.com/people/gou-ya-yu-95',
-        text: 'followers',
-        // api: 'zhihu/gou-ya-yu-95'
-      }
-    ]}
-  />
-  <!-- #endregion -->
+  <!-- #region 社交媒体（暂时隐藏） --><!-- #endregion -->
 
   <!-- #region 爱好（暂时隐藏） -->
   <!-- <h2 id='hobbies'>Hobbies</h2>

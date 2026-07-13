@@ -1,0 +1,37 @@
+---
+import { getCollection } from 'astro:content'
+import BaseLayout from '@/layouts/BaseLayout.astro'
+
+export const prerender = true
+
+const drafts = (await getCollection('blog', ({ data }) => data.draft === true))
+  .sort((a, b) => b.data.publishDate.getTime() - a.data.publishDate.getTime())
+---
+
+<BaseLayout meta={{ title: 'Drafts' }}>
+  <main class='mt-6 lg:mt-10'>
+    <h1 class='mb-2 text-3xl font-medium'>Drafts</h1>
+    <p class='mb-8 text-muted-foreground'>{drafts.length} 篇草稿</p>
+    {
+      drafts.length === 0 ? (
+        <p>暂无草稿。</p>
+      ) : (
+        <ul class='flex flex-col gap-y-3'>
+          {drafts.map((post) => (
+            <li>
+              <a
+                href={`/blog/${post.id}`}
+                class='flex items-baseline gap-x-3 no-underline hover:underline'
+              >
+                <span class='text-sm tabular-nums text-muted-foreground'>
+                  {post.data.publishDate.toISOString().slice(0, 10)}
+                </span>
+                <span>{post.data.title}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </main>
+</BaseLayout>

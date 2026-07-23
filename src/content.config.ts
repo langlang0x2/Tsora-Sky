@@ -40,27 +40,4 @@ const blog = defineCollection({
     })
 })
 
-// Define songs collection
-const songs = defineCollection({
-  loader: glob({ base: './src/content/songs', pattern: '**/*.{md,mdx}' }),
-  schema: () =>
-    z
-      .object({
-        title: z.string().max(120).optional(),
-        bvid: z
-          .string()
-          .regex(/^BV[0-9A-Za-z]+$/)
-          .optional(),
-        videoUrl: z.string().url().optional(),
-        cover: z.string().min(1).optional(),
-        collectDate: z.coerce.date(),
-        tags: z.array(z.string()).default([]).transform(removeDupsAndLowerCase),
-        note: z.string().max(280).optional(),
-        draft: z.boolean().default(false)
-      })
-      .refine((val) => Boolean(val.videoUrl || val.bvid), {
-        message: 'Either "videoUrl" or "bvid" is required.'
-      })
-})
-
-export const collections = { blog, songs }
+export const collections = { blog }

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>播放 · Sound — Tsora Sky</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- Password Gate -->
+<div id="password-gate" class="gate-wrap">
+  <p class="text-sm text-muted">此页面需要密码访问</p>
+  <input id="password-input" type="password" placeholder="请输入密码" autofocus>
+  <p id="password-error" class="gate-error hidden"></p>
+</div>
+
+<div id="app" class="container hidden">
+  <div class="mt-6">
+    <a href="/" class="btn btn-back">← 返回 Sound</a>
+  </div>
+
+  <div class="mt-8 player-wrap">
+    <!-- Controls -->
+    <div class="flex flex-wrap gap-3">
+      <button class="btn" id="btn-prev">上一首</button>
+      <button class="btn" id="btn-next">下一首</button>
+      <button class="btn" id="btn-rand">随机</button>
+      <span class="text-sm text-muted">模式：<samp id="play-mode">顺序</samp></span>
+      <button class="btn" id="btn-toggle">切换模式</button>
+    </div>
+
+    <!-- Info -->
+    <div>
+      <h2 id="song-title" style="font-size:1.125rem;font-weight:500">未选择</h2>
+      <p id="song-meta" class="text-sm text-muted"></p>
+    </div>
+
+    <!-- Player -->
+    <div class="player-frame">
+      <div class="aspect">
+        <iframe id="player" src="about:blank" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+      </div>
+      <div id="fallback" class="hidden" style="padding:.75rem;font-size:.875rem;color:var(--fg-muted)">
+        当前链接无法内嵌播放。
+        <a id="open-origin" class="btn" href="#" target="_blank" rel="noreferrer">打开原视频</a>
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div class="flex flex-wrap gap-3 text-sm text-muted">
+      <span>当前：<samp id="song-index">0</samp>/<samp id="song-total">0</samp></span>
+      <span class="select-none">·</span>
+      <span>筛选标签：<samp id="filter-tag">无</samp></span>
+    </div>
+  </div>
+</div>
+
+<script>
+const PASSWORD = 'tsora2026';
+
+// ── Password ──
+const gate = document.getElementById('password-gate');
+const app = document.getElementById('app');
+const pwdInput = document.getElementById('password-input');
+const pwdError = document.getElementById('password-error');
+
+if (sessionStorage.getItem('songs-auth') === PASSWORD) {
+  gate.classList.add('hidden');
+  app.classList.remove('hidden');
+  init();
+}
+
+pwdInput.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (pwdInput.value === PASSWORD) {
+    sessionStorage.setItem('songs-auth', PASSWORD);
+    gate.classList.add('hidden');
+    app.classList.remove('hidden');
+    pwdError.classList.add('hidden');
+    init();
+  } else {
+    pwdError.textContent = '密码错误';
+    pwdError.classList.remove('hidden');
+    pwdInput.value = '';
+  }
+});
+
+// ── State ──
+let list = [];
+let idx = 0;
+let mode = 'seq';  // seq | rand
+let activeTag = null;
+
+// ── API ──
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    ...opts
+  });
+  if (!res.ok) throw new Error(`${res.status}`);
+  return res.json();
+}
+
+async function init() {
+  try {
+    list = await api('/api/songs/all');
+  } catch (err) {
+    document.getElementById('song-title').textContent = '加载失败: ' + err.message;
+    return;
+  }
+
+  // Read URL params
+  const params = new URLSearchParams(location.search);
+  const urlId = params.get('id');
+  const urlMode = params.get('mode');
+  const urlTag = params.get('tag');
+
+  if (urlId) {
+    idx = list.findIndex(s => s.id === urlId);
+    if (idx < 0) idx = 0;
+  }
+  if (urlMode === 'rand') mode = 'rand';
+  if (urlTag) activeTag = urlTag;
+
+  applyTagFilter();
+  render();
+}
+
+function getFiltered() {
+  if (!activeTag) return list;
+  const tag = activeTag.toLowerCase();
+  return list.filter(s => (s.tags || []).some(t => t.toLowerCase() === tag));
+}
+
+function applyTagFilter() {
+  const filtered = getFiltered();
+  if (filtered.length === 0) return;
+
+  // Try to keep current song, or reset idx
+  if (idx >= filtered.length) idx = 0;
+}
+
+function render() {
+  const filtered = getFiltered();
+  document.getElementById('song-total').textContent = String(filtered.length);
+  document.getElementById('filter-tag').textContent = activeTag || '无';
+  document.getElementById('play-mode').textContent = mode === 'rand' ? '随机' : '顺序';
+
+  if (filtered.length === 0) {
+    document.getElementById('song-title').textContent = '没有匹配的歌曲';
+    document.getElementById('song-index').textContent = '0';
+    return;
+  }
+
+  if (idx >= filtered.length) idx = 0;
+
+  const song = filtered[idx];
+  document.getElementById('song-index').textContent = String(idx + 1);
+  document.getElementById('song-title').textContent = song.title || song.id || '未知';
+
+  const metaParts = [];
+  if (song.collect_date) metaParts.push(`收藏于 ${song.collect_date}`);
+  if ((song.tags || []).length) metaParts.push(`标签：${song.tags.join('、')}`);
+  document.getElementById('song-meta').textContent = metaParts.join('  ·  ');
+
+  // Embed
+  const embed = buildEmbed(song);
+  const player = document.getElementById('player');
+  const fallback = document.getElementById('fallback');
+  const originLink = document.getElementById('open-origin');
+
+  if (embed) {
+    player.src = embed;
+    player.classList.remove('hidden');
+    fallback.classList.add('hidden');
+  } else {
+    player.classList.add('hidden');
+    fallback.classList.remove('hidden');
+    originLink.href = song.video_url || '#';
+  }
+
+  updateQuery();
+}
+
+function buildEmbed(song) {
+  const bvid = song.bvid || parseBvid(song.video_url);
+  if (bvid) return `https://player.bilibili.com/player.html?bvid=${encodeURIComponent(bvid)}&autoplay=1`;
+
+  const ytId = song.video_url ? parseYouTubeId(song.video_url) : null;
+  if (ytId) return `https://www.youtube.com/embed/${encodeURIComponent(ytId)}?autoplay=1&rel=0`;
+
+  return null;
+}
+
+function parseBvid(url) {
+  if (!url) return null;
+  const m = url.match(/\/video\/(BV[0-9A-Za-z]+)/);
+  return m ? m[1] : null;
+}
+
+function parseYouTubeId(url) {
+  if (!url) return null;
+  let m = url.match(/youtu\.be\/([A-Za-z0-9_-]+)/);
+  if (m) return m[1];
+  m = url.match(/[?&]v=([A-Za-z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
+function updateQuery() {
+  const filtered = getFiltered();
+  if (filtered.length === 0) return;
+  const song = filtered[idx];
+  const params = new URLSearchParams();
+  params.set('id', song.id);
+  params.set('mode', mode);
+  if (activeTag) params.set('tag', activeTag);
+  history.replaceState(null, '', '?' + params.toString());
+}
+
+// ── Controls ──
+function step(dir) {
+  const filtered = getFiltered();
+  if (filtered.length === 0) return;
+  idx = (idx + dir + filtered.length) % filtered.length;
+  render();
+}
+
+document.getElementById('btn-prev').addEventListener('click', () => step(-1));
+document.getElementById('btn-next').addEventListener('click', () => {
+  if (mode === 'rand') {
+    const filtered = getFiltered();
+    if (filtered.length > 1) {
+      let next;
+      do { next = Math.floor(Math.random() * filtered.length); } while (next === idx && filtered.length > 1);
+      idx = next;
+    }
+    render();
+  } else {
+    step(1);
+  }
+});
+document.getElementById('btn-rand').addEventListener('click', () => {
+  const filtered = getFiltered();
+  if (filtered.length <= 1) return;
+  let next;
+  do { next = Math.floor(Math.random() * filtered.length); } while (next === idx && filtered.length > 1);
+  idx = next;
+  render();
+});
+document.getElementById('btn-toggle').addEventListener('click', () => {
+  mode = mode === 'seq' ? 'rand' : 'seq';
+  document.getElementById('play-mode').textContent = mode === 'rand' ? '随机' : '顺序';
+  updateQuery();
+});
+</script>
+</body>
+</html>

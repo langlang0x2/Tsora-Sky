@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(STORAGE_KV_REST_API_URL=\"https://electric-osprey-99999.upstash.io\" STORAGE_KV_REST_API_TOKEN=\"gQAAAAAAAYafAAIncDJhZmQ5MjZlNTczYzE0YTM2YjRjZGQwNWFiNzdkY2M1NXAyOTk5OTk\" python -m scripts.migrate_clicks)",
+      "Bash(pip show *)",
+      "Bash(python -m pip install httpx)",
+      "Bash(/c/Users/13524/AppData/Local/Programs/Python/Python312/python.exe -m scripts.migrate_clicks)",
+      "Bash(/c/Users/13524/AppData/Local/Programs/Python/Python312/python.exe -m pip install httpx)",
+      "Bash(/c/Users/13524/AppData/Local/Programs/Python/Python312/python.exe -c \"import httpx; print\\('ok'\\)\")",
+      "Bash(STORAGE_KV_REST_API_URL=\"https://electric-osprey-99999.upstash.io\" STORAGE_KV_REST_API_TOKEN=\"gQAAAAAAAYafAAIncDJhZmQ5MjZlNTczYzE0YTM2YjRjZGQwNWFiNzdkY2M1NXAyOTk5OTk\" /c/Users/13524/AppData/Local/Programs/Python/Python312/python.exe -m scripts.migrate_clicks)",
+      "Bash(/c/Users/13524/AppData/Local/Programs/Python/Python312/python.exe -m pip install sqlalchemy)",
+      "Bash(/c/Users/13524/AppData/Local/Programs/Python/Python312/python.exe -c \"import sqlalchemy; print\\('sqlalchemy ok'\\)\")",
+      "Bash(/c/Users/13524/AppData/Local/Programs/Python/Python312/python.exe -c ' *)",
+      "Bash(/c/Users/13524/AppData/Local/Programs/Python/Python312/python.exe -m scripts.sync_fav)"
+    ]
+  }
+}

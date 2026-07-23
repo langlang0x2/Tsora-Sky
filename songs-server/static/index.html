@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sound — Tsora Sky</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- Password Gate -->
+<div id="password-gate" class="gate-wrap">
+  <p class="text-sm text-muted">此页面需要密码访问</p>
+  <input id="password-input" type="password" placeholder="请输入密码" autofocus>
+  <p id="password-error" class="gate-error hidden"></p>
+</div>
+
+<div id="app" class="container hidden">
+  <h1>Sound</h1>
+  <p class="text-sm text-muted">点击会在新标签页打开视频，并在本机记录观看次数。</p>
+  <p class="mt-4">总观看次数：<samp id="total-clicks">0</samp></p>
+
+  <!-- Sort -->
+  <div class="flex flex-wrap gap-3 mt-4">
+    <button class="btn sort-date" data-sort="date" aria-current="page">按收藏时间</button>
+    <button class="btn sort-plays" data-sort="plays">按播放量</button>
+  </div>
+
+  <!-- Search -->
+  <div class="search-box">
+    <label for="search-input">搜索（标题 / 备注）</label>
+    <input id="search-input" type="search" placeholder="例如：Ado、日语、翻唱">
+    <p id="search-summary" class="search-summary"></p>
+  </div>
+
+  <!-- Tags -->
+  <div id="tag-bar" class="tag-bar"></div>
+
+  <!-- Grid -->
+  <div id="groups"></div>
+  <div id="flat-wrap" class="hidden">
+    <h2 class="mt-4" style="font-size:1.5rem;font-weight:500">按播放量排序</h2>
+    <ul id="flat-list" class="song-grid mt-4"></ul>
+  </div>
+  <p id="empty-tip" class="hidden text-sm text-muted mt-4">没有匹配的收藏。</p>
+  <div id="sentinel" class="mt-4" style="height:1px"></div>
+  <p id="load-status" class="text-sm text-muted mt-4">加载中…</p>
+</div>
+
+<script>
+const PASSWORD = 'tsora2026';
+const PAGE_SIZE = 24;
+const BASE = '';
+
+// ── Password ──
+const gate = document.getElementById('password-gate');
+const app = document.getElementById('app');
+const pwdInput = document.getElementById('password-input');
+const pwdError = document.getElementById('password-error');
+
+if (sessionStorage.getItem('songs-auth') === PASSWORD) {
+  gate.classList.add('hidden');
+  app.classList.remove('hidden');
+  init();
+}
+
+pwdInput.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (pwdInput.value === PASSWORD) {
+    sessionStorage.setItem('songs-auth', PASSWORD);
+    gate.classList.add('hidden');
+    app.classList.remove('hidden');
+    pwdError.classList.add('hidden');
+    init();
+  } else {
+    pwdError.textContent = '密码错误';
+    pwdError.classList.remove('hidden');
+    pwdInput.value = '';
+  }
+});
+
+// ── State ──
+let SONGS = [];
+let clickMap = {};
+let activeMode = 'date';
+let reverseOrder = false;
+let searchQuery = '';
+let tagStates = new Map();   // tag → 0|1|-1
+let filtered = [];
+let dateSorted = [];
+let playSorted = [];
+let dateCursor = 0;
+let playCursor = 0;
+let monthLists = new Map();
+let observer = null;
+
+// ── API ──
+async function api(path, opts = {}) {
+  const res = await fetch(BASE + path, {
+    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    ...opts
+  });
+  if (!res.ok) throw new Error(`${res.status}`);
+  return res.json();
+}
+
+async function init() {
+  try {
+    const [songs, tags, stats] = await Promise.all([
+      api('/api/songs/all'),
+      api('/api/songs/tags'),
+      api('/api/stats/batch', { method: 'POST', body: JSON.stringify({ ids: [] }) })
+    ]);
+    SONGS = songs;
+    clickMap = stats || {};
+
+    // Initialize clickMap for bulk read later
+    loadAllClicks();
+
+    renderTags(tags);
+    applyAll();
+  } catch (err) {
+    document.getElementById('load-status').textContent = '加载失败: ' + err.message;
+  }
+}
+
+async function loadAllClicks() {
+  const ids = SONGS.map(s => s.id).filter(Boolean);
+  if (!ids.length) return;
+  const CHUNK = 200;
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    try {
+      const data = await api('/api/stats/batch', {
+        method: 'POST', body: JSON.stringify({ ids: ids.slice(i, i + CHUNK) })
+      });
+      Object.assign(clickMap, data);
+    } catch (_) {}
+  }
+  updateTotalClicks();
+  if (activeMode === 'plays') { updateVisibleCounts(); applySort('plays'); }
+}
+
+async function incrClick(songId) {
+  try {
+    const r = await api('/api/stats/incr', {
+      method: 'POST', body: JSON.stringify({ song_id: songId })
+    });
+    clickMap[songId] = r.plays;
+    updateTotalClicks();
+    updateVisibleCounts();
+    if (activeMode === 'plays') applySort('plays');
+  } catch (_) {}
+}
+
+// ── Tags ──
+function renderTags(allTags) {
+  const bar = document.getElementById('tag-bar');
+  bar.innerHTML = '';
+
+  const resetBtn = document.createElement('button');
+  resetBtn.className = 'btn';
+  resetBtn.setAttribute('aria-current', 'page');
+  resetBtn.innerHTML = `全部 <span class="text-xs">${SONGS.length}</span>`;
+  resetBtn.addEventListener('click', () => {
+    tagStates.clear();
+    updateTagUI();
+    applyAll();
+  });
+  bar.appendChild(resetBtn);
+
+  // Count tags
+  const countMap = new Map();
+  for (const s of SONGS) {
+    for (const t of (s.tags || [])) {
+      countMap.set(t.toLowerCase(), (countMap.get(t.toLowerCase()) || 0) + 1);
+    }
+  }
+
+  for (const tag of allTags) {
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.dataset.filterTag = tag;
+    btn.dataset.filterState = '0';
+    btn.innerHTML = `${tag} <span class="text-xs">${countMap.get(tag) || 0}</span>`;
+    btn.addEventListener('click', () => {
+      const cur = Number(tagStates.get(tag) || 0);
+      const next = cur === 0 ? 1 : cur === 1 ? -1 : 0;
+      if (next === 0) tagStates.delete(tag); else tagStates.set(tag, next);
+      updateTagUI();
+      applyAll();
+    });
+    bar.appendChild(btn);
+  }
+}
+
+function updateTagUI() {
+  document.querySelectorAll('[data-filter-tag]').forEach(el => {
+    const tag = el.dataset.filterTag;
+    const state = Number(tagStates.get(tag) || 0);
+    el.dataset.filterState = String(state);
+    el.setAttribute('aria-pressed', state === 0 ? 'false' : 'true');
+  });
+  const reset = document.querySelector('#tag-bar .btn');
+  if (reset) reset.setAttribute('aria-current', tagStates.size === 0 ? 'page' : 'false');
+}
+
+// ── Filter ──
+function matchesTagFilter(song) {
+  const songTags = new Set((song.tags || []).map(t => t.toLowerCase()));
+  for (const [tag, state] of tagStates) {
+    if (state === 1 && !songTags.has(tag)) return false;
+    if (state === -1 && songTags.has(tag)) return false;
+  }
+  return true;
+}
+
+function recomputeFiltered() {
+  const q = searchQuery.toLowerCase().replace(/\s+/g, '');
+  filtered = SONGS.filter(s => {
+    if (q) {
+      const text = `${s.title || ''} ${s.note || ''} ${(s.tags || []).join(' ')}`.toLowerCase().replace(/\s+/g, '');
+      if (!text.includes(q)) return false;
+    }
+    return matchesTagFilter(s);
+  });
+}
+
+// ── Search ──
+document.getElementById('search-input').addEventListener('input', e => {
+  searchQuery = e.target.value;
+  applyAll();
+});
+
+// ── Sort buttons ──
+document.querySelectorAll('[data-sort]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const mode = btn.dataset.sort;
+    if (mode === activeMode) reverseOrder = !reverseOrder;
+    else reverseOrder = false;
+    activeMode = mode;
+    localStorage.setItem('songs-sort-mode', mode);
+    applySort(mode);
+  });
+});
+
+function updateSortUI() {
+  document.querySelectorAll('[data-sort]').forEach(el => {
+    const isActive = el.dataset.sort === activeMode;
+    if (isActive) el.setAttribute('aria-current', 'page');
+    else el.removeAttribute('aria-current');
+  });
+}
+
+// ── Apply ──
+function applyAll() {
+  recomputeFiltered();
+  updateSearchSummary();
+  applySort(activeMode);
+}
+
+function applySort(mode) {
+  activeMode = mode;
+  updateSortUI();
+
+  const list = [...filtered];
+  if (mode === 'plays') {
+    playSorted = list.sort((a, b) => {
+      const ca = clickMap[a.id] || 0;
+      const cb = clickMap[b.id] || 0;
+      const diff = reverseOrder ? ca - cb : cb - ca;
+      if (diff !== 0) return diff;
+      const da = new Date(a.collect_date).getTime();
+      const db = new Date(b.collect_date).getTime();
+      return reverseOrder ? da - db : db - da;
+    });
+    renderFlat();
+  } else {
+    dateSorted = reverseOrder ? list.reverse() : list;
+    renderGroups();
+  }
+  updateLoadStatus();
+  setupObserver();
+  fillViewport();
+}
+
+function updateSearchSummary() {
+  const el = document.getElementById('search-summary');
+  const parts = [`共 ${filtered.length} / ${SONGS.length} 首`];
+  const inc = [...tagStates.entries()].filter(([,v]) => v === 1).map(([k]) => k);
+  const exc = [...tagStates.entries()].filter(([,v]) => v === -1).map(([k]) => k);
+  if (inc.length) parts.push(`选中：${inc.join('、')}`);
+  if (exc.length) parts.push(`反选：${exc.join('、')}`);
+  el.textContent = parts.join('；');
+}
+
+// ── Card ──
+function createCard(song) {
+  const li = document.createElement('li');
+  li.className = 'h-full';
+
+  const a = document.createElement('a');
+  a.className = 'song-card';
+  a.href = song.video_url || '#';
+  a.target = '_blank';
+  a.rel = 'noreferrer';
+  a.dataset.songId = song.id;
+
+  const media = document.createElement('div');
+  media.className = 'song-card-img';
+  const img = document.createElement('img');
+  img.src = song.cover || '';
+  img.alt = song.title || '';
+  img.loading = 'lazy';
+  img.onerror = () => { img.onerror = null; img.src = ''; };
+  media.appendChild(img);
+
+  const body = document.createElement('div');
+  body.className = 'song-card-body';
+
+  const title = document.createElement('h3');
+  title.className = 'song-card-title';
+  title.textContent = song.title || song.id;
+  body.appendChild(title);
+
+  if (song.note) {
+    const note = document.createElement('p');
+    note.className = 'song-card-note';
+    note.textContent = song.note;
+    body.appendChild(note);
+  }
+
+  const meta = document.createElement('div');
+  meta.className = 'song-card-meta';
+  meta.innerHTML = `
+    <span>收藏于 ${song.collect_date}</span>
+    <span class="select-none">·</span>
+    <span>观看次数：<samp data-count>${clickMap[song.id] || 0}</samp></span>
+    ${(song.tags || []).length ? `<span class="truncate">标签：${song.tags.join('、')}</span>` : ''}
+  `;
+  body.appendChild(meta);
+
+  a.appendChild(media);
+  a.appendChild(body);
+  li.appendChild(a);
+  return li;
+}
+
+// ── Date groups ──
+function renderGroups() {
+  document.getElementById('groups').classList.remove('hidden');
+  document.getElementById('flat-wrap').classList.add('hidden');
+  document.getElementById('groups').innerHTML = '';
+  monthLists.clear();
+  dateCursor = 0;
+  updateEmptyState();
+  loadMoreDate();
+}
+
+function getMonthList(ym) {
+  if (monthLists.has(ym)) return monthLists.get(ym);
+  const section = document.createElement('div');
+  section.className = 'month-section';
+  section.innerHTML = `<h2>${ym}</h2>`;
+  const ul = document.createElement('ul');
+  ul.className = 'song-grid mt-4';
+  section.appendChild(ul);
+  document.getElementById('groups').appendChild(section);
+  monthLists.set(ym, ul);
+  return ul;
+}
+
+function loadMoreDate() {
+  const slice = dateSorted.slice(dateCursor, dateCursor + PAGE_SIZE);
+  for (const s of slice) {
+    const d = s.collect_date;
+    const ym = d ? d.slice(0, 7) : '未知';
+    getMonthList(ym).appendChild(createCard(s));
+  }
+  dateCursor += slice.length;
+}
+
+// ── Flat (plays) ──
+function renderFlat() {
+  document.getElementById('groups').classList.add('hidden');
+  document.getElementById('flat-wrap').classList.remove('hidden');
+  document.getElementById('flat-list').innerHTML = '';
+  playCursor = 0;
+  updateEmptyState();
+  loadMoreFlat();
+}
+
+function loadMoreFlat() {
+  const list = document.getElementById('flat-list');
+  const slice = playSorted.slice(playCursor, playCursor + PAGE_SIZE);
+  for (const s of slice) list.appendChild(createCard(s));
+  playCursor += slice.length;
+}
+
+// ── Lazy load ──
+function setupObserver() {
+  if (observer) observer.disconnect();
+  const sentinel = document.getElementById('sentinel');
+  if (!sentinel || typeof IntersectionObserver === 'undefined') return;
+  observer = new IntersectionObserver(entries => {
+    if (entries[0]?.isIntersecting) loadMore();
+  }, { rootMargin: '240px' });
+  observer.observe(sentinel);
+}
+
+function loadMore() {
+  if (activeMode === 'plays') {
+    if (playCursor >= playSorted.length) return;
+    loadMoreFlat();
+  } else {
+    if (dateCursor >= dateSorted.length) return;
+    loadMoreDate();
+  }
+  updateLoadStatus();
+}
+
+function hasMore() {
+  return activeMode === 'plays' ? playCursor < playSorted.length : dateCursor < dateSorted.length;
+}
+
+function updateLoadStatus() {
+  const el = document.getElementById('load-status');
+  if (filtered.length === 0) { el.textContent = ''; return; }
+  el.textContent = hasMore() ? '继续下滑以加载更多…' : '已加载全部内容';
+}
+
+function updateEmptyState() {
+  document.getElementById('empty-tip').classList.toggle('hidden', filtered.length > 0);
+  document.getElementById('sentinel').classList.toggle('hidden', filtered.length === 0);
+}
+
+function updateTotalClicks() {
+  let total = 0;
+  for (const v of Object.values(clickMap)) total += Number(v) || 0;
+  document.getElementById('total-clicks').textContent = String(total);
+}
+
+function updateVisibleCounts() {
+  document.querySelectorAll('[data-count]').forEach(el => {
+    const songId = el.closest('[data-song-id]')?.dataset.songId;
+    if (songId) el.textContent = String(clickMap[songId] || 0);
+  });
+}
+
+function fillViewport() {
+  let guard = 0;
+  while (hasMore() && guard < 4 && document.documentElement.scrollHeight <= window.innerHeight + 120) {
+    loadMore();
+    guard++;
+  }
+}
+
+// ── Click tracking ──
+document.addEventListener('click', e => {
+  const card = e.target.closest('[data-song-id]');
+  if (!card) return;
+  const id = card.dataset.songId;
+  if (id) incrClick(id);
+});
+
+// ── Load saved sort mode ──
+try {
+  const saved = localStorage.getItem('songs-sort-mode');
+  if (saved === 'plays') activeMode = saved;
+} catch (_) {}
+</script>
+</body>
+</html>
